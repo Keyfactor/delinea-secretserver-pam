@@ -52,5 +52,5 @@
       }
     }
   },
-  "release_dir": "Release"
+  "release_dir": "bin\\Release"
 }
