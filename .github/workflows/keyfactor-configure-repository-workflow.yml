@@ -1,0 +1,19 @@
+name: Configure Repository Workflow
+on: [workflow_dispatch]
+
+jobs:
+  call-update-topic:
+    uses: Keyfactor/actions/.github/workflows/kf-update-topics.yml@main
+    secrets:
+      token: ${{ secrets.GH_REPO_CONFIG }}
+
+  call-update-description:
+    uses: Keyfactor/actions/.github/workflows/kf-update-description.yml@main
+    secrets:
+      token: ${{ secrets.GH_REPO_CONFIG }}
+
+  call-update-teams:
+    uses: Keyfactor/actions/.github/workflows/kf-update-teams.yml@main
+    secrets:
+      token: ${{ secrets.GH_REPO_CONFIG }}
+
