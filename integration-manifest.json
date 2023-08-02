@@ -1,0 +1,55 @@
+{
+  "$schema": "https://keyfactor.github.io/integration-manifest-schema.json",
+  "integration_type": "pam",
+  "name": "Delinea Secret Server PAM Provider",
+  "status": "prototype",
+  "support_level": "community",
+  "link_github": true,
+  "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
+  "about": {
+    "pam": {
+      "providerName": "Delinea Secret Server PAM Provider",
+      "assemblyName": "delinea-secretserver-pam",
+      "dbName": "Delinea-SecretServer",
+      "fullyQualifiedClassName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam",
+      "pam_types": {
+        "Delinea-SecretServer": {
+          "Name": "Delinea-SecretServer",
+          "Parameters": [
+            {
+              "Name": "Host",
+              "DisplayName": "Secret Server URL",
+              "DataType": 1,
+              "InstanceLevel": false
+            },
+            {
+              "Name": "Username",
+              "DisplayName": "Secret Server Username",
+              "DataType": 2,
+              "InstanceLevel": false
+            },
+            {
+              "Name": "Password",
+              "DisplayName": "Secret Server Password",
+              "DataType": 2,
+              "InstanceLevel": false
+            },
+            {
+              "Name": "SecretId",
+              "DisplayName": "Secret ID",
+              "DataType": 1,
+              "InstanceLevel": true
+            },
+            {
+              "Name": "SecretFieldName",
+              "DisplayName": "Secret Field Name",
+              "DataType": 1,
+              "InstanceLevel": true
+            }
+          ]
+        }
+      }
+    }
+  },
+  "release_dir": ""
+}
