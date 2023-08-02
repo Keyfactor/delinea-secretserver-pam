@@ -5,6 +5,7 @@
   "status": "prototype",
   "support_level": "community",
   "link_github": true,
+  "update_catalog": false,
   "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
   "about": {
     "pam": {
@@ -51,5 +52,5 @@
       }
     }
   },
-  "release_dir": ""
+  "release_dir": "bin\\Release\\net6.0"
 }
