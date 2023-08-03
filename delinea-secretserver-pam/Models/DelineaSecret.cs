@@ -20,6 +20,5 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         [JsonProperty("itemValue")] public string Value { get; set; }
 
         [JsonProperty("isPassword")] public bool IsPassword { get; set; }
-    }    
+    }
 }
-

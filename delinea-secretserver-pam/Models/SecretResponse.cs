@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 
 namespace Keyfactor.Extensions.Pam.Delinea.Models
 {
-    
     internal class SecretResponse
     {
         [JsonProperty("id")] public int Id { get; set; }

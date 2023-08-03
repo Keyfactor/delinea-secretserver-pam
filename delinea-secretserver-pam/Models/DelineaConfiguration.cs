@@ -9,11 +9,11 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
 {
     internal class DelineaConfiguration
     {
-        public static string SECRET_SERVER_URL { get; } = "SecretServerUrl";
-        public static string USERNAME { get; } = "Username";
-        public static string PASSWORD { get; } = "Password";
-        public static string SECRET_ID { get; } = "SecretId";
-        public static string SECRET_FIELD_NAME { get; } = "SecretFieldName";
+        public static string SECRET_SERVER_URL => "Host";
+        public static string USERNAME => "Username";
+        public static string PASSWORD => "Password";
+        public static string SECRET_ID => "SecretId";
+        public static string SECRET_FIELD_NAME => "SecretFieldName";
 
         public string SecretServerUrl { get; set; }
 
@@ -26,4 +26,3 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         public string SecretFieldName { get; set; }
     }
 }
-
