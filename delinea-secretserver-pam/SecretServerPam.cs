@@ -5,16 +5,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
 // and limitations under the License.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using Keyfactor.Extensions.Pam.Delinea.Models;
 using Keyfactor.Logging;
 using Keyfactor.Platform.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Keyfactor.Extensions.Pam.Delinea;
-
-public class SecretServerPam : IPAMProvider
+namespace Keyfactor.Extensions.Pam.Delinea
+{
+    public class SecretServerPam : IPAMProvider
 {
     private ILogger Logger { get; } = LogHandler.GetClassLogger<SecretServerPam>();
     public string Name => "Delinea-SecretServer";
@@ -22,9 +27,11 @@ public class SecretServerPam : IPAMProvider
     public string GetPassword(Dictionary<string, string> instanceParameters,
         Dictionary<string, string> initializationInfo)
     {
-        using var client = BuildHttpClient();
-        var config = BuildDelineaConfiguration(instanceParameters, initializationInfo);
-        return GetDelineaSecretAsync(client, config).Result;
+        using (var client = BuildHttpClient())
+        {
+            var config = BuildDelineaConfiguration(instanceParameters, initializationInfo);
+            return GetDelineaSecretAsync(client, config).Result;
+        }
     }
 
     private async Task<string> GetDelineaSecretAsync(HttpClient client, DelineaConfiguration configurationInfo)
@@ -159,3 +166,5 @@ public class SecretServerPam : IPAMProvider
         return client;
     }
 }
+}
+

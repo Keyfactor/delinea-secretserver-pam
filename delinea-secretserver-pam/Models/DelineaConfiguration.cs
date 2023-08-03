@@ -5,23 +5,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
 // and limitations under the License.
 
-namespace Keyfactor.Extensions.Pam.Delinea.Models;
-
-internal class DelineaConfiguration
+namespace Keyfactor.Extensions.Pam.Delinea.Models
 {
-    public static string SECRET_SERVER_URL { get; } = "SecretServerUrl";
-    public static string USERNAME { get; } = "Username";
-    public static string PASSWORD { get; } = "Password";
-    public static string SECRET_ID { get; } = "SecretId";
-    public static string SECRET_FIELD_NAME { get; } = "SecretFieldName";
+    internal class DelineaConfiguration
+    {
+        public static string SECRET_SERVER_URL { get; } = "SecretServerUrl";
+        public static string USERNAME { get; } = "Username";
+        public static string PASSWORD { get; } = "Password";
+        public static string SECRET_ID { get; } = "SecretId";
+        public static string SECRET_FIELD_NAME { get; } = "SecretFieldName";
 
-    public string SecretServerUrl { get; init; }
+        public string SecretServerUrl { get; set; }
 
-    public string Username { get; init; }
+        public string Username { get; set; }
 
-    public string Password { get; init; }
+        public string Password { get; set; }
 
-    public int SecretId { get; init; }
+        public int SecretId { get; set; }
 
-    public string SecretFieldName { get; init; }
+        public string SecretFieldName { get; set; }
+    }
 }
+
