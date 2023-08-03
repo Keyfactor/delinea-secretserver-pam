@@ -5,21 +5,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
 // and limitations under the License.
 
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Keyfactor.Extensions.Pam.Delinea.Models;
-
-internal class SecretResponse
+namespace Keyfactor.Extensions.Pam.Delinea.Models
 {
-    [JsonProperty("id")] public int Id { get; set; }
+    
+    internal class SecretResponse
+    {
+        [JsonProperty("id")] public int Id { get; set; }
 
-    [JsonProperty("name")] public string Name { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
 
-    [JsonProperty("secretTemplateId")] public int SecretTemplateId { get; set; }
+        [JsonProperty("secretTemplateId")] public int SecretTemplateId { get; set; }
 
-    [JsonProperty("folderId")] public int FolderId { get; set; }
+        [JsonProperty("folderId")] public int FolderId { get; set; }
 
-    [JsonProperty("active")] public bool Active { get; set; }
+        [JsonProperty("active")] public bool Active { get; set; }
 
-    [JsonProperty("items")] public List<DelineaSecret> Items { get; set; }
+        [JsonProperty("items")] public List<DelineaSecret> Items { get; set; }
+    }
 }

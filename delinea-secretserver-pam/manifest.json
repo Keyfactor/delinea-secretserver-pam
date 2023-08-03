@@ -1,0 +1,15 @@
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "PAMProviders.Delinea.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com",
+    "Username": "my_secretserver_service_account",
+    "Password": "xxxxxx"
+  }
+}

@@ -7,17 +7,19 @@
 
 using Newtonsoft.Json;
 
-namespace Keyfactor.Extensions.Pam.Delinea.Models;
-
-internal class DelineaSecret
+namespace Keyfactor.Extensions.Pam.Delinea.Models
 {
-    [JsonProperty("itemId")] public int Id { get; set; }
+    internal class DelineaSecret
+    {
+        [JsonProperty("itemId")] public int Id { get; set; }
 
-    [JsonProperty("fieldName")] public string Name { get; set; }
+        [JsonProperty("fieldName")] public string Name { get; set; }
 
-    [JsonProperty("slug")] public string Slug { get; set; }
+        [JsonProperty("slug")] public string Slug { get; set; }
 
-    [JsonProperty("itemValue")] public string Value { get; set; }
+        [JsonProperty("itemValue")] public string Value { get; set; }
 
-    [JsonProperty("isPassword")] public bool IsPassword { get; set; }
+        [JsonProperty("isPassword")] public bool IsPassword { get; set; }
+    }    
 }
+
