@@ -27,9 +27,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
         public string GetPassword(Dictionary<string, string> instanceParameters,
             Dictionary<string, string> initializationInfo)
         {
+            Logger.LogInformation("Starting Delinea Secret Server PAM Provider");
             Logger.LogDebug("Getting password from Delinea Secret Server");
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
-            Logger.LogTrace("initializationInfo: {@InitializationInfo}", initializationInfo);
+            // Logger.LogTrace("initializationInfo: {@InitializationInfo}", initializationInfo); // Commented out to avoid logging sensitive information
             using (var client = BuildHttpClient())
             {
                 var config = BuildDelineaConfiguration(instanceParameters, initializationInfo);
@@ -59,8 +60,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
-                Logger.LogError(
-                    $"An error occurred while attempting to communicate with Delinea Secret Server: {ex.Message}");
+                Logger.LogError("An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}", ex.Message);
                 throw;
             }
 
@@ -69,13 +69,13 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogDebug("Attempting to deserialize Delinea Secret Server content into a data model");
             var secretResponse = JsonConvert.DeserializeObject<SecretResponse>(content);
 
-            Logger.LogTrace($"Received {secretResponse?.Items.Count ?? 0} secrets from Delinea Secret Server");
+            Logger.LogTrace("Received '{ItemsCount}' secrets from Delinea Secret Server", secretResponse?.Items.Count ?? 0);
 
             // var secret = secretResponse?.Items.FirstOrDefault(i => i.IsPassword)?.Value;
             var secret = secretResponse?.Items.FirstOrDefault(i =>
                 i.Name == configurationInfo.SecretFieldName || i.Slug == configurationInfo.SecretFieldName)?.Value;
             if (!string.IsNullOrEmpty(secret)) return secret;
-            Logger.LogError("No secret was found or no items in the secret were of type password.");
+            Logger.LogError("No secret was found or no items in the secret were of type password");
             return "";
         }
 
@@ -99,19 +99,18 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .PostAsync(new Uri($"{configurationInfo.SecretServerUrl}/oauth2/token").AbsoluteUri,
                         new FormUrlEncodedContent(body))
                     .ConfigureAwait(false);
-                Logger.LogTrace("Request sent");
+                Logger.LogDebug("Request sent");
 
                 response.EnsureSuccessStatusCode();
             }
 
             catch (HttpRequestException ex)
             {
-                Logger.LogError(
-                    $"An error occurred while attempting to fetch an access token from Delinea Secret Server: {ex.Message}");
+                Logger.LogError("An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage}", ex.Message);
                 throw;
             }
 
-            Logger.LogTrace("Access token received.");
+            Logger.LogTrace("Access token received");
 
             Logger.LogDebug("Deserializing access token response");
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -122,8 +121,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             Logger.LogTrace("Access token parsed");
             if (token != null) return token;
-            Logger.LogError(
-                $"Unable to generate access token from Delinea Secret Server '{configurationInfo.SecretServerUrl}' as '{configurationInfo.Username}'. Please check your credentials and try again.");
+            Logger.LogError("Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again", configurationInfo.SecretServerUrl, configurationInfo.Username);
             return "";
         }
 
