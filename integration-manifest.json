@@ -2,10 +2,10 @@
   "$schema": "https://keyfactor.github.io/integration-manifest-schema.json",
   "integration_type": "pam",
   "name": "Delinea Secret Server PAM Provider",
-  "status": "prototype",
-  "support_level": "community",
+  "status": "production",
+  "support_level": "kf-supported",
   "link_github": true,
-  "update_catalog": false,
+  "update_catalog": true,
   "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
   "about": {
     "pam": {
