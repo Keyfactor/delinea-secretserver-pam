@@ -19,7 +19,7 @@ internal class Program
         var instanceParams = new Dictionary<string, string>();
 
         //Read SecretServerUrl from environment variable
-        initInfo.Add("SecretServerUrl",
+        initInfo.Add("Host",
             Environment.GetEnvironmentVariable("SECRET_SERVER_URL") ?? "https://keyfactor.secretservercloud.com");
         //Read Username from environment variable
         initInfo.Add("Username", Environment.GetEnvironmentVariable("SECRET_SERVER_USERNAME") ?? "pam-tester");
