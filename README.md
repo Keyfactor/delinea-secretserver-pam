@@ -23,7 +23,6 @@ Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor custo
 
 
 - [Delinea Secret Server PAM Provider](#delinea-secret-server-pam-provider)
-    * [Integration status: Pilot - Not for use in production environments.](#integration-status--pilot---not-for-use-in-production-environments)
     * [About the Keyfactor PAM Provider](#about-the-keyfactor-pam-provider)
     * [Support for Delinea Secret Server PAM Provider](#support-for-delinea-secret-server-pam-provider)
     * [Keyfactor Version Supported](#keyfactor-version-supported)
