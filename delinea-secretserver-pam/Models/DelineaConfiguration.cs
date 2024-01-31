@@ -14,6 +14,7 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         public static string PASSWORD => "Password";
         public static string SECRET_ID => "SecretId";
         public static string SECRET_FIELD_NAME => "SecretFieldName";
+        public static string LOG_SECRETS => "LogSecrets";
 
         public string SecretServerUrl { get; set; }
 
@@ -24,5 +25,7 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         public int SecretId { get; set; }
 
         public string SecretFieldName { get; set; }
+
+        public bool LogSecrets { get; set; }
     }
 }

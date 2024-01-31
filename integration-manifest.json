@@ -6,6 +6,7 @@
   "support_level": "kf-supported",
   "link_github": true,
   "update_catalog": true,
+  "keyfactor_platform_version": "10.x",
   "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
   "about": {
     "pam": {
@@ -44,6 +45,12 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
+              "DataType": 1,
+              "InstanceLevel": true
+            },
+            {
+              "Name": "LogSecrets",
+              "DisplayName": "Log Secrets",
               "DataType": 1,
               "InstanceLevel": true
             }

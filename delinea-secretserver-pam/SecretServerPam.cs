@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -34,7 +33,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
             using (var client = BuildHttpClient())
             {
                 var config = BuildDelineaConfiguration(instanceParameters, initializationInfo);
-                return GetDelineaSecretAsync(client, config).Result;
+                var output = GetDelineaSecretAsync(client, config).Result;
+                return output;
             }
         }
 
@@ -48,11 +48,11 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             try
             {
-                Logger.LogTrace("Sending request to Secret Server...");
+                var secretServerUri =
+                    $"{configurationInfo.SecretServerUrl}/api/v1/secrets/{configurationInfo.SecretId}";
+                Logger.LogTrace("Sending request to Secret Server at {SecretServerUri}", secretServerUri);
                 response = await client
-                    .GetAsync(new Uri(
-                            $"{configurationInfo.SecretServerUrl}/api/v1/secrets/{configurationInfo.SecretId}")
-                        .AbsoluteUri)
+                    .GetAsync(new Uri(secretServerUri).AbsoluteUri)
                     .ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
@@ -60,7 +60,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
-                Logger.LogError("An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}", ex.Message);
+                Logger.LogError(
+                    "An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
+                    ex.Message);
                 throw;
             }
 
@@ -69,12 +71,47 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogDebug("Attempting to deserialize Delinea Secret Server content into a data model");
             var secretResponse = JsonConvert.DeserializeObject<SecretResponse>(content);
 
-            Logger.LogTrace("Received '{ItemsCount}' secrets from Delinea Secret Server", secretResponse?.Items.Count ?? 0);
+            Logger.LogTrace("Received '{ItemsCount}' secrets from Delinea Secret Server",
+                secretResponse?.Items.Count ?? 0);
 
+            if (configurationInfo.LogSecrets) Logger.LogTrace("SecretResponse: {@SecretResponse}", secretResponse);
             // var secret = secretResponse?.Items.FirstOrDefault(i => i.IsPassword)?.Value;
-            var secret = secretResponse?.Items.FirstOrDefault(i =>
-                i.Name == configurationInfo.SecretFieldName || i.Slug == configurationInfo.SecretFieldName)?.Value;
-            if (!string.IsNullOrEmpty(secret)) return secret;
+            // var secret = secretResponse?.Items.FirstOrDefault(i =>
+            //     i.Name == configurationInfo.SecretFieldName || i.Slug == configurationInfo.SecretFieldName)?.Value;
+            // if (!string.IsNullOrEmpty(secret)) return secret;
+
+            var secretValue = "";
+            for (var i = 0; i < secretResponse?.Items.Count; i++)
+            {
+                Logger.LogTrace("Secret response field name: {Name}", secretResponse.Items[i].Name);
+                if (string.Equals(secretResponse.Items[i].Name, configurationInfo.SecretFieldName,
+                        StringComparison.OrdinalIgnoreCase) || string.Equals(secretResponse.Items[i].Slug,
+                        configurationInfo.SecretFieldName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.LogDebug("Secret field found matching {ConfigurationInfoSecretFieldName}",
+                        configurationInfo.SecretFieldName);
+                    Logger.LogTrace("{ConfigurationInfoSecretFieldName} == ({RespFieldName} || {RespSlug})",
+                        configurationInfo.SecretFieldName, secretResponse.Items[i].Name, secretResponse.Items[i].Slug);
+                    secretValue = secretResponse.Items[i].Value;
+                    if (configurationInfo.LogSecrets) Logger.LogTrace("Secret value: {Secret}", secretValue);
+                    break;
+                }
+
+                Logger.LogTrace("{ConfigurationInfoSecretFieldName} != ({RespFieldName} || {RespSlug})",
+                    configurationInfo.SecretFieldName, secretResponse.Items[i].Name, secretResponse.Items[i].Slug);
+                Logger.LogDebug("Skipping secret response field: {Name}", secretResponse.Items[i].Slug);
+            }
+
+            if (!string.IsNullOrEmpty(secretValue))
+            {
+                Logger.LogDebug("Returning non empty/null value for {ConfigurationInfoSecretFieldName} from {SecretServerUrl}",
+                    configurationInfo.SecretFieldName, configurationInfo.SecretServerUrl);
+                if (configurationInfo.LogSecrets) Logger.LogTrace("{ConfigurationIndoSecretFieldName}: {Secret}", configurationInfo.SecretFieldName,
+                    secretValue);
+                return secretValue;
+            }
+
+
             Logger.LogError("No secret was found or no items in the secret were of type password");
             return "";
         }
@@ -106,7 +143,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
-                Logger.LogError("An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage}", ex.Message);
+                Logger.LogError(
+                    "An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage}",
+                    ex.Message);
                 throw;
             }
 
@@ -121,7 +160,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             Logger.LogTrace("Access token parsed");
             if (token != null) return token;
-            Logger.LogError("Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again", configurationInfo.SecretServerUrl, configurationInfo.Username);
+            Logger.LogError(
+                "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again",
+                configurationInfo.SecretServerUrl, configurationInfo.Username);
             return "";
         }
 
@@ -175,14 +216,35 @@ namespace Keyfactor.Extensions.Pam.Delinea
             if (instanceParameters.ContainsKey(DelineaConfiguration.SECRET_FIELD_NAME))
             {
                 Logger.LogDebug("Building Delinea configuration");
-                return new DelineaConfiguration
+                var logSecrets = false;
+                if (instanceParameters.ContainsKey(DelineaConfiguration.LOG_SECRETS))
+                {
+                    if (bool.TryParse(instanceParameters[DelineaConfiguration.LOG_SECRETS], out logSecrets))
+                    {
+                        if (logSecrets)
+                            Logger.LogWarning(
+                                "Logging plain text secret values is enabled and will be logged in the TRACE logs");
+                    }
+                    else
+                    {
+                        Logger.LogError("Unable to parse {LogSecrets} as a boolean", DelineaConfiguration.LOG_SECRETS);
+                        throw new Exception(
+                            $"Unable to parse {instanceParameters[DelineaConfiguration.LOG_SECRETS]} as a boolean");
+                    }
+                }
+
+                var dConfig = new DelineaConfiguration
                 {
                     SecretServerUrl = initializationInfo[DelineaConfiguration.SECRET_SERVER_URL],
                     Username = initializationInfo[DelineaConfiguration.USERNAME],
                     Password = initializationInfo[DelineaConfiguration.PASSWORD],
                     SecretId = secretId,
+                    LogSecrets = logSecrets,
                     SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME]
                 };
+                Logger.LogDebug("Delinea configuration built");
+                if (logSecrets) Logger.LogTrace("Delinea configuration: {@DelineaConfiguration}", dConfig);
+                return dConfig;
             }
 
             Logger.LogError("Instance parameters does not contain the \'{SecretFieldName}\' key",
