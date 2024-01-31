@@ -104,13 +104,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             if (!string.IsNullOrEmpty(secretValue))
             {
-                Logger.LogDebug("Returning non empty/null value for {ConfigurationInfoSecretFieldName} from {SecretServerUrl}",
+                Logger.LogDebug(
+                    "Returning non empty/null value for {ConfigurationInfoSecretFieldName} from {SecretServerUrl}",
                     configurationInfo.SecretFieldName, configurationInfo.SecretServerUrl);
-                if (configurationInfo.LogSecrets) Logger.LogTrace("{ConfigurationIndoSecretFieldName}: {Secret}", configurationInfo.SecretFieldName,
-                    secretValue);
+                if (configurationInfo.LogSecrets)
+                    Logger.LogTrace("{ConfigurationIndoSecretFieldName}: {Secret}", configurationInfo.SecretFieldName,
+                        secretValue);
                 return secretValue;
             }
-
 
             Logger.LogError("No secret was found or no items in the secret were of type password");
             return "";
@@ -149,17 +150,25 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 throw;
             }
 
-            Logger.LogTrace("Access token received");
 
             Logger.LogDebug("Deserializing access token response");
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var values = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+            if (configurationInfo.LogSecrets) Logger.LogTrace("Access token response: {Json}", json);
+
+            Logger.LogDebug("Access token response deserialized");
 
             var token = values?["access_token"];
+            if (configurationInfo.LogSecrets) Logger.LogTrace("Access token: {Token}", token);
+
             client.DefaultRequestHeaders.Accept.Clear();
 
-            Logger.LogTrace("Access token parsed");
-            if (token != null) return token;
+            if (!string.IsNullOrEmpty(token))
+            {
+                Logger.LogInformation("Access token received from Delinea Secret Server");
+                return token;
+            }
+
             Logger.LogError(
                 "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again",
                 configurationInfo.SecretServerUrl, configurationInfo.Username);
@@ -171,6 +180,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
             IReadOnlyDictionary<string, string> initializationInfo)
         {
             Logger.LogDebug("Building Delinea configuration");
+            Logger.LogTrace("Checking for parameter {SecretId} in instance parameters", DelineaConfiguration.SECRET_ID);
             if (!instanceParameters.ContainsKey(DelineaConfiguration.SECRET_ID))
             {
                 Logger.LogError("Instance parameters does not contain the '{SecretId}' key",
@@ -178,7 +188,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 throw new Exception($"Instance level parameters is missing the '{DelineaConfiguration.SECRET_ID}' key");
             }
 
-
+            Logger.LogTrace("Checking for parameter {SecretServerUrl} in instance parameters",
+                DelineaConfiguration.SECRET_SERVER_URL);
             if (!initializationInfo.ContainsKey(DelineaConfiguration.SECRET_SERVER_URL))
             {
                 Logger.LogError("Initialization parameters does not contain the \'{SecretServerUrl}\' key",
@@ -188,6 +199,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
             }
 
 
+            Logger.LogTrace("Checking for parameter {Username} in instance parameters", DelineaConfiguration.USERNAME);
             if (!initializationInfo.ContainsKey(DelineaConfiguration.USERNAME))
             {
                 Logger.LogError("Initialization parameters does not contain the \'{Username}\' key",
@@ -195,7 +207,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 throw new Exception($"Instance level parameters is missing the '{DelineaConfiguration.USERNAME}' key");
             }
 
-
+            Logger.LogTrace("Checking for parameter {Password} in instance parameters", DelineaConfiguration.PASSWORD);
             if (!initializationInfo.ContainsKey(DelineaConfiguration.PASSWORD))
             {
                 Logger.LogError("Initialization parameters does not contain the \'{Password}\' key",
@@ -212,26 +224,18 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     $"Unable to parse {instanceParameters[DelineaConfiguration.SECRET_ID]} as an integer");
             }
 
-
+            var logSecrets = false; // Explicitly default to false 
             if (instanceParameters.ContainsKey(DelineaConfiguration.SECRET_FIELD_NAME))
             {
                 Logger.LogDebug("Building Delinea configuration");
-                var logSecrets = false;
-                if (instanceParameters.ContainsKey(DelineaConfiguration.LOG_SECRETS))
-                {
-                    if (bool.TryParse(instanceParameters[DelineaConfiguration.LOG_SECRETS], out logSecrets))
-                    {
-                        if (logSecrets)
-                            Logger.LogWarning(
-                                "Logging plain text secret values is enabled and will be logged in the TRACE logs");
-                    }
-                    else
-                    {
-                        Logger.LogError("Unable to parse {LogSecrets} as a boolean", DelineaConfiguration.LOG_SECRETS);
-                        throw new Exception(
-                            $"Unable to parse {instanceParameters[DelineaConfiguration.LOG_SECRETS]} as a boolean");
-                    }
-                }
+
+                var logSecretsValue = instanceParameters.ContainsKey(DelineaConfiguration.LOG_SECRETS)
+                    ? instanceParameters[DelineaConfiguration.LOG_SECRETS]
+                    : initializationInfo[DelineaConfiguration.LOG_SECRETS];
+                if (!string.IsNullOrEmpty(logSecretsValue) && bool.TryParse(logSecretsValue, out logSecrets))
+                    if (logSecrets)
+                        Logger.LogWarning(
+                            "Logging plain text secret values is enabled and will be logged in the TRACE logs");
 
                 var dConfig = new DelineaConfiguration
                 {
@@ -244,6 +248,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 };
                 Logger.LogDebug("Delinea configuration built");
                 if (logSecrets) Logger.LogTrace("Delinea configuration: {@DelineaConfiguration}", dConfig);
+                Logger.LogInformation("Delinea client config is valid");
                 return dConfig;
             }
 
