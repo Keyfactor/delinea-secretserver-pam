@@ -1,9 +1,10 @@
 ### Initialization Parameters for each defined PAM Provider instance
-| Initialization parameter |      Display Name       | Description                                                               |
-|:------------------------:|:-----------------------:|---------------------------------------------------------------------------|
-|           Host           |    Secret Server URL    | The IP address or URL of the Vault instance, including any port number    |
-|         Username         | Secret Server Username  | The username the PAM provider is going to use to connect to SecretServer. |
-|         Password         | Secret Server Password  | The username the PAM provider is going to use to connect to SecretServer. |
+| Initialization parameter |      Display Name      | Description                                                                                                                                                                                                      |
+|:------------------------:|:----------------------:|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|           Host           |   Secret Server URL    | The IP address or URL of the Vault instance, including any port number                                                                                                                                           |
+|         Username         | Secret Server Username | The username the PAM provider is going to use to connect to SecretServer.                                                                                                                                        |
+|         Password         | Secret Server Password | The username the PAM provider is going to use to connect to SecretServer.                                                                                                                                        |
+|        LogSecrets        |      Log Secrets       | Boolean value that determines if secret values are written to logs in plain text. Defaults to `false`. WARNING: There are security risks with writing secrets to logs, this should not be enabled in production! |
 
 
 
