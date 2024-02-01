@@ -222,7 +222,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     $"Unable to parse {instanceParameters[DelineaConfiguration.SECRET_ID]} as an integer");
             }
 
-            var logSecrets = false; // Explicitly default to false 
+            var logSecrets = true; // Explicitly default to false 
             Logger.LogInformation("Secrets logged: {LogSecrets}", logSecrets);
             if (instanceParameters.ContainsKey(DelineaConfiguration.SECRET_FIELD_NAME))
             {
