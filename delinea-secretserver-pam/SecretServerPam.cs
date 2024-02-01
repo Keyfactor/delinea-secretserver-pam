@@ -71,14 +71,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogDebug("Attempting to deserialize Delinea Secret Server content into a data model");
             var secretResponse = JsonConvert.DeserializeObject<SecretResponse>(content);
 
-            Logger.LogTrace("Received '{ItemsCount}' secrets from Delinea Secret Server",
+            Logger.LogTrace("Received '{ItemsCount}' fields from Delinea Secret Server",
                 secretResponse?.Items.Count ?? 0);
 
             if (configurationInfo.LogSecrets) Logger.LogTrace("SecretResponse: {@SecretResponse}", secretResponse);
-            // var secret = secretResponse?.Items.FirstOrDefault(i => i.IsPassword)?.Value;
-            // var secret = secretResponse?.Items.FirstOrDefault(i =>
-            //     i.Name == configurationInfo.SecretFieldName || i.Slug == configurationInfo.SecretFieldName)?.Value;
-            // if (!string.IsNullOrEmpty(secret)) return secret;
 
             var secretValue = "";
             for (var i = 0; i < secretResponse?.Items.Count; i++)
@@ -129,6 +125,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 { "grant_type", "password" }
             };
 
+            if (configurationInfo.LogSecrets) Logger.LogTrace("Access token request body: {@Body}", body);
+
             HttpResponseMessage response;
             try
             {
@@ -153,9 +151,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             Logger.LogDebug("Deserializing access token response");
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var values = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
             if (configurationInfo.LogSecrets) Logger.LogTrace("Access token response: {Json}", json);
 
+            var values = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
             Logger.LogDebug("Access token response deserialized");
 
             var token = values?["access_token"];
@@ -225,6 +223,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
             }
 
             var logSecrets = false; // Explicitly default to false 
+            Logger.LogInformation("Secrets logged: {LogSecrets}", logSecrets);
             if (instanceParameters.ContainsKey(DelineaConfiguration.SECRET_FIELD_NAME))
             {
                 Logger.LogDebug("Building Delinea configuration");
@@ -232,10 +231,17 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 var logSecretsValue = instanceParameters.ContainsKey(DelineaConfiguration.LOG_SECRETS)
                     ? instanceParameters[DelineaConfiguration.LOG_SECRETS]
                     : initializationInfo[DelineaConfiguration.LOG_SECRETS];
-                if (!string.IsNullOrEmpty(logSecretsValue) && bool.TryParse(logSecretsValue, out logSecrets))
+                Logger.LogTrace("LogSecretsValue: {LogSecretsValue}", logSecretsValue);
+                if (!string.IsNullOrEmpty(logSecretsValue))
+                {
+                    var parsed = bool.TryParse(logSecretsValue, out logSecrets);
+                    if (!parsed)
+                        Logger.LogError("Unable to parse {LogSecrets} as a boolean. Secrets will not be logged",
+                            DelineaConfiguration.LOG_SECRETS);
                     if (logSecrets)
                         Logger.LogWarning(
                             "Logging plain text secret values is enabled and will be logged in the TRACE logs");
+                }
 
                 var dConfig = new DelineaConfiguration
                 {
