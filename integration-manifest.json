@@ -46,6 +46,12 @@
               "DisplayName": "Secret Field Name",
               "DataType": 1,
               "InstanceLevel": true
+            },
+            {
+              "Name": "LogSecrets",
+              "DisplayName": "Log Secrets",
+              "DataType": 1,
+              "InstanceLevel": true
             }
           ]
         }
