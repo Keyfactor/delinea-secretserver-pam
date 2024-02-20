@@ -1,0 +1,71 @@
+$DEBUG=0
+
+function help() {
+    Write-Host "Usage: .\test_pwsh.ps1"
+    Write-Host "This script prompts for the secret server URL, secret ID, username, and password if they're not set, authenticates and gets a token, uses the token to fetch the secret with the given ID, and then unsets the variables."
+    Write-Host "You can set the following environment variables to avoid being prompted:"
+    Write-Host "  SECRET_SERVER_URL: The URL of your secret server"
+    Write-Host "  SECRET_SERVER_SECRET_ID: The ID of your secret"
+    Write-Host "  SECRET_SERVER_USERNAME: Your secret server username"
+    Write-Host "  SECRET_SERVER_PASSWORD: Your secret server password"
+}
+
+function debug($message) {
+  if ($DEBUG) {
+    Write-Host $message
+  }
+}
+
+function writeFile($content, $filePath) {
+  Set-Content -Path $filePath -Value $content
+}
+
+function unsetSecretServerVariables() {
+  Remove-Variable -Name SECRET_SERVER_URL, SECRET_SERVER_SECRET_ID, SECRET_SERVER_USERNAME, SECRET_SERVER_PASSWORD, SECRET_SERVER_ACCESS_TOKEN, SECRET_SERVER_ACCESS_TOKEN_RESPONSE, SECRET_RESPONSE -ErrorAction SilentlyContinue
+}
+
+if (![string]::IsNullOrEmpty($env:SECRET_SERVER_URL)) {
+  $SECRET_SERVER_URL = Read-Host -Prompt "Enter your secret server URL"
+}
+
+if (![string]::IsNullOrEmpty($env:SECRET_SERVER_SECRET_ID)) {
+  $SECRET_SERVER_SECRET_ID = Read-Host -Prompt "Enter your secret ID"
+}
+
+if (![string]::IsNullOrEmpty($env:SECRET_SERVER_USERNAME)) {
+  $SECRET_SERVER_USERNAME = Read-Host -Prompt "Enter your secret server username"
+}
+
+if (![string]::IsNullOrEmpty($env:SECRET_SERVER_PASSWORD)) {
+  $SECRET_SERVER_PASSWORD = Read-Host -Prompt "Enter your secret server password"
+}
+
+if ([string]::IsNullOrEmpty($SECRET_SERVER_URL) -or [string]::IsNullOrEmpty($SECRET_SERVER_SECRET_ID) -or [string]::IsNullOrEmpty($SECRET_SERVER_USERNAME) -or [string]::IsNullOrEmpty($SECRET_SERVER_PASSWORD)) {
+  Write-Host "Please provide all the required values. Exiting..."
+  help
+}
+
+if (!($SECRET_SERVER_URL -match '^https?://')) {
+  $SECRET_SERVER_URL = "https://$SECRET_SERVER_URL"
+}
+
+$SECRET_SERVER_TOKEN_FILE_OUTPUT_PATH="secret_server_token.txt"
+$SECRET_SERVER_SECRET_FILE_OUTPUT_PATH="secret_server_secret_${SECRET_SERVER_SECRET_ID}.json"
+$SECRET_SERVER_TOKEN_RESPONSE="secret_server_token.json"
+
+Write-Host "Authenticating and getting a token for $SECRET_SERVER_USERNAME..."
+
+$SECRET_SERVER_ACCESS_TOKEN_RESPONSE = Invoke-RestMethod -Uri "${SECRET_SERVER_URL}/oauth2/token" -Method POST -Body "grant_type=password&username=${SECRET_SERVER_USERNAME}&password=${SECRET_SERVER_PASSWORD}&scope=api" -ContentType "application/x-www-form-urlencoded"
+debug "SECRET_SERVER_ACCESS_TOKEN_RESPONSE: $SECRET_SERVER_ACCESS_TOKEN_RESPONSE"
+writeFile $SECRET_SERVER_ACCESS_TOKEN_RESPONSE $SECRET_SERVER_TOKEN_RESPONSE
+
+$SECRET_SERVER_ACCESS_TOKEN = $SECRET_SERVER_ACCESS_TOKEN_RESPONSE.access_token
+debug "SECRET_SERVER_ACCESS_TOKEN: $SECRET_SERVER_ACCESS"
+writeFile $SECRET_SERVER_ACCESS_TOKEN $SECRET_SERVER_TOKEN_FILE_OUTPUT_PATH
+
+Write-Host "Fetching the secret with ID $SECRET_SERVER_SECRET_ID..."
+$SECRET_RESPONSE = Invoke-RestMethod -Uri "${SECRET_SERVER_URL}/api/v1/secrets/${SECRET_SERVER_SECRET_ID}" -Method GET -Headers @{"Authorization"="Bearer $SECRET_SERVER_ACCESS_TOKEN"; "Content-Type"="application/json"}
+debug "SECRET_RESPONSE: ${SECRET_RESPONSE}"
+writeFile "${SECRET_RESPONSE}" $SECRET_SERVER_SECRET_FILE_OUTPUT_PATH
+
+unsetSecretServerVariables
