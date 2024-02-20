@@ -2,6 +2,15 @@
 set -e -o pipefail
 DEBUG=0
 
+function help() {
+    echo "Usage: ./test_curl.sh"
+    echo "This script prompts for the secret server URL, secret ID, username, and password if they're not set, authenticates and gets a token, uses the token to fetch the secret with the given ID, and then unsets the variables."
+    echo "You can set the following environment variables to avoid being prompted:"
+    echo "  SECRET_SERVER_URL: The URL of your secret server"
+    echo "  SECRET_SERVER_SECRET_ID: The ID of your secret"
+    echo "  SECRET_SERVER_USERNAME: Your secret server username"
+    echo "  SECRET_SERVER_PASSWORD: Your secret server password"
+}
 
 # function that checks if DEBUG is true and prints the output of the argument
 function debug() {
@@ -61,7 +70,7 @@ fi
 # Check that no values are empty
 if [ -z "$SECRET_SERVER_URL" ] || [ -z "$SECRET_SERVER_SECRET_ID" ] || [ -z "$SECRET_SERVER_USERNAME" ] || [ -z "$SECRET_SERVER_PASSWORD" ]; then
   echo "Please provide all the required values. Exiting..."
-  exit 1
+  help
 fi
 
 # Check if URL is prefixed with http or https

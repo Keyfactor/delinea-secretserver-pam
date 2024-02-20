@@ -1,5 +1,15 @@
 $DEBUG=0
 
+function help() {
+    Write-Host "Usage: .\test_pwsh.ps1"
+    Write-Host "This script prompts for the secret server URL, secret ID, username, and password if they're not set, authenticates and gets a token, uses the token to fetch the secret with the given ID, and then unsets the variables."
+    Write-Host "You can set the following environment variables to avoid being prompted:"
+    Write-Host "  SECRET_SERVER_URL: The URL of your secret server"
+    Write-Host "  SECRET_SERVER_SECRET_ID: The ID of your secret"
+    Write-Host "  SECRET_SERVER_USERNAME: Your secret server username"
+    Write-Host "  SECRET_SERVER_PASSWORD: Your secret server password"
+}
+
 function debug($message) {
   if ($DEBUG) {
     Write-Host $message
@@ -32,7 +42,7 @@ if (![string]::IsNullOrEmpty($env:SECRET_SERVER_PASSWORD)) {
 
 if ([string]::IsNullOrEmpty($SECRET_SERVER_URL) -or [string]::IsNullOrEmpty($SECRET_SERVER_SECRET_ID) -or [string]::IsNullOrEmpty($SECRET_SERVER_USERNAME) -or [string]::IsNullOrEmpty($SECRET_SERVER_PASSWORD)) {
   Write-Host "Please provide all the required values. Exiting..."
-  exit
+  help
 }
 
 if (!($SECRET_SERVER_URL -match '^https?://')) {
