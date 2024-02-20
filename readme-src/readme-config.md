@@ -161,7 +161,7 @@ For full details and the latest product documentation on creating a PAM Provider
 [PAM Provider Configuration in Keyfactor Command](https://software.keyfactor.com/Content/ReferenceGuide/PAM%20Configuration%20in%20Keyfactor%20Command.htm?Highlight=delinea) docs.
 
 In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings
-menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
+menu (upper right cog) you can select the ___Privileged Access Management___ option to configure your provider instance.
 
 ![](../images/setting.png)
 ![](images/setting.png)
