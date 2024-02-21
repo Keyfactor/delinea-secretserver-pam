@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
+# Copyright 2024 Keyfactor
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at http:#www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
+# and limitations under the License.
+
 set -e -o pipefail
-DEBUG=0
+DEBUG=0 # Set to 1 to enable debug output
+#export SECRET_SERVER_URL="<your_secret_server_url>"
+#export SECRET_SERVER_USERNAME="<your_secret_server_username>"
+#export SECRET_SERVER_PASSWORD="<your_secret_server_password>"
+#export SECRET_SERVER_SECRET_ID="<your_secret_id>"
 
 function help() {
     echo "Usage: ./test_curl.sh"
@@ -71,6 +82,7 @@ fi
 if [ -z "$SECRET_SERVER_URL" ] || [ -z "$SECRET_SERVER_SECRET_ID" ] || [ -z "$SECRET_SERVER_USERNAME" ] || [ -z "$SECRET_SERVER_PASSWORD" ]; then
   echo "Please provide all the required values. Exiting..."
   help
+  exit 1
 fi
 
 # Check if URL is prefixed with http or https
@@ -103,5 +115,6 @@ SECRET_RESPONSE=$(curl -s -X GET "${SECRET_SERVER_URL}/api/v1/secrets/${SECRET_S
 -H "Content-Type: application/json")
 debug "SECRET_RESPONSE: ${SECRET_RESPONSE}"
 writeFile "${SECRET_RESPONSE}" "${SECRET_SERVER_SECRET_FILE_OUTPUT_PATH}"
+echo "$SECRET_RESPONSE" | jq -r .
 
 unsetSecretServerVariables
