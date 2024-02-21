@@ -26,6 +26,7 @@ internal class Program
         //Read Password from environment variable
         initInfo.Add("Password", Environment.GetEnvironmentVariable("SECRET_SERVER_PASSWORD") ?? "changeme!");
         //Read SecretId from environment variable
+        initInfo.Add("LogSecrets", true.ToString());
         instanceParams.Add("SecretId", Environment.GetEnvironmentVariable("SECRET_SERVER_SECRET_ID") ?? "1");
         instanceParams.Add("SecretFieldName", "username");
         var username = pam.GetPassword(instanceParams, initInfo);
