@@ -1,169 +1,295 @@
-# Delinea Secret Server PAM Provider
+<h1 align="center" style="border-bottom: none">
+    Delinea Secret Server PAM Provider
+</h1>
 
-The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret 
-Server secret. A valid username, password and secret share settings are required.
+<p align="center">
+  <!-- Badges -->
+<img src="https://img.shields.io/badge/integration_status-production-3D1973?style=flat-square" alt="Integration Status: production" />
+<a href="https://github.com/Keyfactor/delinea-secretserver-pam/releases"><img src="https://img.shields.io/github/v/release/Keyfactor/delinea-secretserver-pam?style=flat-square" alt="Release" /></a>
+<img src="https://img.shields.io/github/issues/Keyfactor/delinea-secretserver-pam?style=flat-square" alt="Issues" />
+<img src="https://img.shields.io/github/downloads/Keyfactor/delinea-secretserver-pam/total?style=flat-square&label=downloads&color=28B905" alt="GitHub Downloads (all assets, all releases)" />
+</p>
 
-#### Integration status: Production - Ready for use in production environments.
+<p align="center">
+  <!-- TOC -->
+  <a href="#support">
+    <b>Support</b>
+  </a> 
+  ·
+  <a href="#getting-started">
+    <b>Installation</b>
+  </a>
+  ·
+  <a href="#license">
+    <b>License</b>
+  </a>
+  ·
+  <a href="https://github.com/orgs/Keyfactor/repositories?q=pam">
+    <b>Related Integrations</b>
+  </a>
+</p>
 
+## Overview
 
-## About the Keyfactor Command PAM Provider
+The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret
+Server secret. Supports either `password` or `client_credential` authentication methods. For more information on
+these authentication methods, see the
+[Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
 
-Keyfactor supports the retrieval of credentials from 3rd party Privileged Access Management (PAM) solutions. Secret 
-values can normally be stored, encrypted at rest, in the Keyfactor Platform database. A PAM Provider can allow these 
-secrets to be stored, managed, and rotated in an external platform. This integration is usually configured on the 
-Keyfactor Command Platform itself, where the platform can request the credential values when needed. In certain scenarios, 
-a PAM Provider can instead be run on a remote location in conjunction with a Keyfactor Orchestrator to allow credential 
-requests to originate from a location other than the Keyfactor Command Platform.
+## Support
+The Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
 
+> To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 
-## Support for Delinea Secret Server PAM Provider
+## Getting Started
 
-Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative.
+The Delinea Secret Server PAM Provider is used by Command to resolve PAM-eligible credentials for Universal Orchestrator extensions and for accessing Certificate Authorities. When configured, Command will use the Delinea Secret Server PAM Provider to retrieve credentials needed to communicate with the target system. There are two ways to install the Delinea Secret Server PAM Provider, and you may elect to use one or both methods:
 
-____To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.____
+1. **Locally on the Keyfactor Command server**: PAM credential resolution via the Delinea Secret Server PAM Provider will occur on the Keyfactor Command server each time an elegible credential is needed.
+2. **Remotely On Universal Orchestrators**: When Jobs are dispatched to Universal Orchestrators, the associated Certificate Store extension assembly will use the Delinea Secret Server PAM Provider to resolve eligible PAM credentials.
 
----
-- [Delinea Secret Server PAM Provider](#delinea-secret-server-pam-provider)
-  - [Integration status: Production - Ready for use in production environments.](#integration-status--production---ready-for-use-in-production-environments)
-    * [About the Keyfactor Command PAM Provider](#about-the-keyfactor-command-pam-provider)
-    * [Support for Delinea Secret Server PAM Provider](#support-for-delinea-secret-server-pam-provider)
-    * [Keyfactor Command Versions Supported](#keyfactor-command-versions-supported)
-        + [Initial Configuration of PAM Provider](#initial-configuration-of-pam-provider)
-        + [Configuring Parameters](#configuring-parameters)
-        + [Initialization Parameters for each defined PAM Provider instance](#initialization-parameters-for-each-defined-pam-provider-instance)
-        + [Instance Parameters for each retrieved secret field](#instance-parameters-for-each-retrieved-secret-field)
-    * [Configuring for PAM Usage](#configuring-for-pam-usage)
-        + [Delinea Secret Server](#delinea-secret-server)
-        + [On Keyfactor Universal Orchestrator](#on-keyfactor-universal-orchestrator)
-            - [Installation](#installation)
-            - [Usage](#usage)
-        + [In Keyfactor - PAM Provider](#in-keyfactor---pam-provider)
-            - [Installation](#installation-1)
-            - [Usage](#usage-1)
+Before proceeding with installation, you should consider which pattern is best for your requirements and use case.
 
-## Keyfactor Command Versions Supported
+### Installation
 
-The minimum version of the Keyfactor Universal Orchestrator Framework needed to run this version of the extension is 10.1
-
-| Keyfactor Version | Universal Orchestrator Framework Version | Supported    |
-|-------------------|------------------------------------------|--------------|
-| 10.4.5            | 10.1, 10.2, 10.4                         | &check;      |
-| 10.4.0            | 10.1, 10.2, 10.4                         | &check;      |
-| 10.2.1            | 10.1, 10.2, 10.4                         | &check;      |
-| 10.1.1            | 10.1, 10.2,                              | &check;      |
-| 10.0.0            | 10.1, 10.2                               | &check;      |
-| 9.10.1            | Not supported on KF 9.X.X                | x            |
-| 9.5.0             | Not supported on KF 9.X.X                | x            |
-
-### Initial Configuration of PAM Provider
-In order to allow Keyfactor to use the new Delinea Secret Server PAM Provider, the definition needs to be added to the 
-application database. This is done by running the provided `kfutil` tool to install the PAM definition, which only 
-needs to be done one time. It uses API credentials to access the Keyfactor instance and create the PAM definition.
-
-The `kfutil` tool, after being [configured for API access](https://github.com/Keyfactor/kfutil#quickstart), can be run 
-in the following manner to install the PAM definition from the Keyfactor repository:
-
-```
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer
-```
-
-### Configuring Parameters
-The following are the parameter names and a description of the values needed to configure the Delinea Secret Server PAM 
-Provider.
-
-### Initialization Parameters for each defined PAM Provider instance
-| Initialization parameter |      Display Name       | Description                                                               |
-|:------------------------:|:-----------------------:|---------------------------------------------------------------------------|
-|           Host           |    Secret Server URL    | The IP address or URL of the Vault instance, including any port number    |
-|         Username         | Secret Server Username  | The username the PAM provider is going to use to connect to SecretServer. |
-|         Password         | Secret Server Password  | The username the PAM provider is going to use to connect to SecretServer. |
+To install Delinea Secret Server PAM Provider, you must install [kfutil](https://github.com/Keyfactor/kfutil). Kfutil is a command-line tool that simplifies the process of creating PAM Types in Keyfactor Command, among many other useful automation features.
 
 
-### Instance Parameters for each retrieved secret field
-| Instance parameter |       Display Name       | Description                                                            |
-|:------------------:|:------------------------:|------------------------------------------------------------------------|
-|      SecretId      | Secret Server Secret ID  | The integer ID of the secret to use.                                   |
-|  SecretFieldName   |    Secret Field Name     | The name of the field to use when looking up a secret on SecretServer. |
 
-![](../images/config.png)
 
-![](images/config.png)
 
-## Configuring for PAM Usage
-### Delinea Secret Server
-When configuring the Delinea Secret Server for use as a PAM Provider with Keyfactor, you will need to ensure that your 
-instance is configured for API access. This can be done by logging into the Delinea Secret Server as an administrator.
-For more details visit the vendor docs [here](https://docs.delinea.com/secrets/current/api-scripting/sdk-cli/index.md#setup_procedure).
 
-Once API access is configured a user account with a username and password is required. That account *MUST* be granted access 
-to view secret's you'll be using. 
 
-After adding and sharing a secret on SecretServer, you can use the secret's ID (the "Secret ID") and the desired value's 
-field name (the "Secret Field Name") to retrieve credentials from the Delinea Secret Server as a PAM Provider.
+#### Prerequisites
 
-### On Keyfactor Universal Orchestrator
-#### Installation
-Configuring the UO to use the Delinea Secret Server PAM Provider requires first installing it as an extension by copying the 
-release contents into a new extension folder named `Delinea-SecretServer`. A `manifest.json` file is included in the release. 
-This file needs to be edited to enter in the `InitializationInfo` parameters for the PAM Provider. Specifically values need 
-to be entered for the parameters in the `manifest.json` of the PAM Provider extension:
+1. Follow the [requirements section](docs/delinea-secretserver.md#requirements) to configure a Service Account, grant necessary API permissions, and create secrets.
+
+    <details><summary>Requirements</summary>
+    - Delinea Secret Server service account or client credential w/ permission to access the secret(s) being used
+
+    </details>
+
+2. Use kfutil to create the required PAM Types in the connected Command platform.
+
+    ```shell
+    # Delinea-SecretServer
+    kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer
+    ```
+
+#### Install on Keyfactor Command (Local)
+
+
+
+1. On the server that hosts Keyfactor Command, download and unzip the latest release of the Delinea Secret Server PAM Provider from the [Releases](../../releases) page.
+
+2. Copy the assemblies to the appropriate directories on the Keyfactor Command server:
+
+    <details><summary>Keyfactor Command 11+</summary>
+
+    1. Copy the unzipped assemblies to each of the following directories:
+
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\Extensions\PamProviders\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\Extensions\PamProviders\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\Extensions\PamProviders`
+
+    </details>
+
+    <details><summary>Keyfactor Command 10</summary>
+
+    1. Copy the assemblies to each of the following directories:
+    
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\Service\delinea-secretserver-pam`
+
+    2. Open a text editor on the Keyfactor Command server as an administrator and open the `web.config` file located in the `WebAgentServices` directory.
+
+    3. In the `web.config` file, locate the `<container> </container>` section and add the following registration:
+
+        ```xml
+        <container>
+            ...
+            <!--The following are PAM Provider registrations. Uncomment them to use them in the Keyfactor Product:-->
+            
+            <!--Add the following line exactly to register the PAM Provider-->
+            <register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPam, Keyfactor.Command.PAMProviders" name="Delinea-SecretServer" />
+        </container>
+        ```
+
+    4. Repeat steps 2 and 3 for each of the directories listed in step 1. The configuration files are located in the following paths by default:
+
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\Service\CMSTimerService.exe.config`
+
+    </details>
+
+3. Restart the Keyfactor Command services (`iisreset`).
+
+
+
+
+#### Install on a Universal Orchestrator (Remote)
+
+
+1. Install the Delinea Secret Server PAM Provider assemblies.
+
+    * **Using kfutil**: On the server that that hosts the Universal Orchestrator, run the following command:
+
+        ```shell
+        # Windows Server
+        kfutil orchestrator extension -e delinea-secretserver-pam@latest --out "C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions"
+
+        # Linux
+        kfutil orchestrator extension -e delinea-secretserver-pam@latest --out "/opt/keyfactor/orchestrator/extensions"
+        ```
+
+    * **Manually**: Download the latest release of the Delinea Secret Server PAM Provider from the [Releases](../../releases) page. Extract the contents of the archive to:
+
+        * **Windows Server**: `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions\delinea-secretserver-pam`
+        * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
+
+2. Included in the release is a `manifest.json` file that contains the following object:
+    ```json
+
+    {
+        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+            "Host": "https://example.secretservercloud.com/SecretServer",
+            "Username": "<USERNAME>",
+            "Password": "<PASSWORD>",
+            "ClientId": "<OAUTH_CLIENT_ID>",
+            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+            "GrantType": "password|client_credentials"
+        }
+    }
+
+    ```
+
+    Populate the fields in this object with credentials and configuration data collected in the [requirements](docs/delinea-secretserver.md#requirements) section.
+
+3. Restart the Universal Orchestrator service.
+
+
+
+
+
+
+
+
+
+### Usage
+
+
+
+
+
+
+#### Keyfactor Command (Local)
+
+
+
+##### Define a PAM provider in Command
+1. In the Keyfactor Command Portal, hover over the ⚙️  (settings) icon in the top right corner of the screen and select **Priviledged Access Management**.
+
+2. Select the **Add** button to create a new PAM provider. Click the dropdown for **Provider Type** and select **Delinea-SecretServer**.
+
+    > If you're running Keyfactor Command 11+, make sure "Remote Provider" is unchecked.
+
+3. Populate the fields with the necessary information collected in the [requirements](docs/delinea-secretserver.md#requirements) section:
+
+| Initialization parameter | Display Name | Description |
+| --- | --- | --- |
+| Host | Secret Server URL | The URL to the Secret Server instance. Example: https://example.secretservercloud.com/SecretServer |
+| Username | Secret Server Username | The username used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type. |
+| Password | Secret Server Password | The password used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type. |
+| ClientId | Secret Server Client ID | The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
+| ClientSecret | Secret Server Client Secret | The client secret used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
+| GrantType | Grant Type | The grant type used to authenticate to the Secret Server instance. Valid values are `password` or `client_credentials`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatability. |
+
+
+4. Click **Save**. The PAM provider is now available for use in Keyfactor Command.
+
+##### Using the PAM provider
+
+Now, when defining Certificate Stores (**Locations**->**Certificate Stores**), **Delinea-SecretServer** will be available as a PAM provider option. When defining new Certificate Stores, the secret parameter form will display tabs for **Load From Keyfactor Secrets** or **Load From PAM Provider**. 
+
+Select the **Load From PAM Provider** tab, choose the **Delinea-SecretServer** provider from the list of **Providers**, and populate the fields with the necessary information from the table below:
+
+| Instance parameter | Display Name | Description |
+| --- | --- | --- |
+| SecretId | Secret ID | The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server. |
+| SecretFieldName | Secret Field Name | The name of the field in the secret that contains the credential value. NOTE: The field must exist. |
+
+
+
+
+
+#### Universal Orchestrator (Remote)
+
+
+
+<details><summary>Keyfactor Command 11+</summary>
+
+##### Define a remote PAM provider in Command
+
+In Command 11 and greater, before using the Delinea-SecretServer PAM type, you must define a Remote PAM Provider in the Command portal.
+
+1. In the Keyfactor Command Portal, hover over the ⚙️  (settings) icon in the top right corner of the screen and select **Priviledged Access Management**.
+
+2. Select the **Add** button to create a new PAM provider.
+
+3. Make sure that "Remote Provider" is checked.
+
+4. Click the dropdown for **Provider Type** and select **Delinea-SecretServer**. 
+
+5. Give the provider a unique name.
+
+6. Click "Save".
+
+##### Using the PAM provider
+
+When defining Certificate Stores (**Locations**->**Certificate Stores**), **Delinea-SecretServer** can be used as a PAM provider. When defining a new Certificate Store, the secret parameter form will display tabs for **Load From Keyfactor Secrets** or **Load From PAM Provider**.
+
+Select the **Load From PAM Provider** tab, choose the **Delinea-SecretServer** provider from the list of **Providers**, and populate the fields with the necessary information from the table below:
+
+| Instance parameter | Display Name | Description |
+| --- | --- | --- |
+| SecretId | Secret ID | The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server. |
+| SecretFieldName | Secret Field Name | The name of the field in the secret that contains the credential value. NOTE: The field must exist. |
+
+
+</details>
+
+<details><summary>Keyfactor Command 10</summary>
+
+When defining Certificate Stores (**Locations**->**Certificate Stores**), **Delinea-SecretServer** can be used as a PAM provider.
+
+When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and populate the **Secret Value** field with the following JSON object:
+
 ```json
-"Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "Username": "my_secretserver_service_account",
-    "Password": "xxxxxx"
-  }
+{"SecretId": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.","SecretFieldName": "The name of the field in the secret that contains the credential value. NOTE: The field must exist."}
+
 ```
 
-#### Usage
-To use the PAM Provider to resolve a field, for example a `Server Password`, instead of entering in the actual value for 
-the `Server Password`, enter a json object with the parameters specifying the field. The parameters needed are the 
-"instance" parameters above:
-```json
-{"SecretId":"1","SecretFieldName":"password"}
-```
-If a field supports PAM but should not use PAM, simply enter in the actual value to be used instead of the json format 
-object above.
+> We recommend creating this JSON object in a text editor, and copying it into the Secret Value field.
 
-### In Keyfactor - PAM Provider
-#### Installation
-In order to setup a new PAM Provider in the Keyfactor Platform for the first time, you will need to run the `kfutil` 
-tool (see Initial Configuration of PAM Provider).
-
-After the installation is run, the DLLs need to be installed to the correct location for the PAM Provider to function. 
-From the release, the `delinea-secretserver-pam.dll` should be copied to the following folder locations in the Keyfactor 
-installation. Once the DLL has been copied to these folders, edit the corresponding config file. You will need to add a 
-new Unity entry as follows under `<container>`, next to other `<register>` tags.
-
-| Install Location | DLL Binary Folder     | Config File                         |
-|------------------|-----------------------|-------------------------------------|
-| WebAgentServices | WebAgentServices\bin\ | WebAgentServices\web.config         |
-| Service          | Service\              | Service\CMSTimerService.exe.config  |
-| KeyfactorAPI     | KeyfactorAPI\bin\     | KeyfactorAPI\web.config             |
-| WebConsole       | WebConsole\bin\       | WebConsole\web.config               |
-
-When enabling a PAM provider for Orchestrators only, the first line for `WebAgentServices` is the only installation needed.
-
-The Keyfactor service and IIS Server should be restarted after making these changes.
-
-```xml
-<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPam, delinea-secretserver-pam" name="Delinea-SecretServer" />
-```
-
-#### Usage
-In order to use the PAM Provider, the provider's configuration must be set in the Keyfactor Platform. In the settings 
-menu (upper right cog) you can select the ___Priviledged Access Management___ option to configure your provider instance.
-
-![](images/setting.png)
-
-After it is set up, you can now use your PAM Provider when configuring certificate stores. Any field that is treated as 
-a Keyfactor secret, such as server passwords and certificate store passwords can be retrieved from your PAM Provider 
-instead of being entered in directly as a secret.
-
-![](images/password.png)
-
----
+</details>
 
 
 
 
+
+
+> Additional information on Delinea-SecretServer can be found in the [supplimental documentation](docs/delinea-secretserver.md).
+
+
+
+## License
+
+Apache License 2.0, see [LICENSE](LICENSE)
+
+## Related Integrations
+
+See all [Keyfactor PAM Provider extensions](https://github.com/orgs/Keyfactor/repositories?q=pam).
