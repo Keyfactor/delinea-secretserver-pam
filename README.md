@@ -152,7 +152,9 @@ To install Delinea Secret Server PAM Provider, you must install [kfutil](https:/
         * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
 
 2. Included in the release is a `manifest.json` file that contains the following object:
+
     ```json
+    // delinea-secretserver-pam/manifest.json
 
     {
         "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
