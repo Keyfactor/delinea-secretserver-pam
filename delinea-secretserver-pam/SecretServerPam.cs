@@ -97,12 +97,12 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogInformation("Starting Delinea Secret Server PAM Provider");
             Logger.LogDebug("Getting password from Delinea Secret Server");
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
-            Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
-                serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
+            // Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
+            //     serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
             using var client = BuildHttpClient();
             var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
-            Logger.LogTrace("Delinea configuration: {@Configuration}",
-                config); //todo: UNSAFE FOR PRODUCTION REMOVE THIS
+            // Logger.LogTrace("Delinea configuration: {@Configuration}",
+            //     config); //TODO: Commented out to avoid logging sensitive information
             Logger.MethodExit();
             return GetDelineaSecretAsync(client, config).Result;
         }
