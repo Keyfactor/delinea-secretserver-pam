@@ -52,6 +52,5 @@
       }
     }
   },
-  "release_dir": "delinea-secretserver-pam\\bin\\netstandard2.1",
-  "release_project": "delinea-secretserver-pam\\Delinea.SecretServer.Pam.csproj"
+  "release_dir": "delinea-secretserver-pam\\bin\\Release"
 }
