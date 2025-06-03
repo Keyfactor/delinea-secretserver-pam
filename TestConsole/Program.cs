@@ -22,16 +22,30 @@ internal class Program
         initInfo.Add("Host",
             Environment.GetEnvironmentVariable("SECRET_SERVER_URL") ?? "https://keyfactor.secretservercloud.com");
         //Read Username from environment variable
-        initInfo.Add("Username", Environment.GetEnvironmentVariable("SECRET_SERVER_USERNAME") ?? "pam-tester");
-        //Read Password from environment variable
-        initInfo.Add("Password", Environment.GetEnvironmentVariable("SECRET_SERVER_PASSWORD") ?? "changeme!");
+        initInfo.Add("GrantType", Environment.GetEnvironmentVariable("SECRET_SERVER_GRANT_TYPE") ?? "password");
+
+        switch (initInfo["GrantType"])
+        {
+            case "password":
+                initInfo.Add("Username", Environment.GetEnvironmentVariable("SECRET_SERVER_USERNAME") ?? "pam-tester");
+                initInfo.Add("Password", Environment.GetEnvironmentVariable("SECRET_SERVER_PASSWORD") ?? "changeme!");
+                break;
+            case "client_credentials":
+                initInfo.Add("ClientId", Environment.GetEnvironmentVariable("SECRET_SERVER_CLIENT_ID") ?? "pam-tester");
+                initInfo.Add("ClientSecret",
+                    Environment.GetEnvironmentVariable("SECRET_SERVER_CLIENT_SECRET") ?? "changeme!");
+                break;
+            default:
+                throw new Exception($"Unsupported Grant Type: {initInfo["GrantType"]}");
+        }
+
         //Read SecretId from environment variable
         instanceParams.Add("SecretId", Environment.GetEnvironmentVariable("SECRET_SERVER_SECRET_ID") ?? "1");
         instanceParams.Add("SecretFieldName", "username");
         var username = pam.GetPassword(instanceParams, initInfo);
         instanceParams["SecretFieldName"] = "password";
         var password = pam.GetPassword(instanceParams, initInfo);
-        Console.WriteLine($"Username: {username}");
-        Console.WriteLine($"Password: {password}");
+        Console.WriteLine($"ServerUsername: {username}");
+        Console.WriteLine($"ServerPassword: {password}");
     }
 }
