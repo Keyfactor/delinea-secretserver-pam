@@ -99,12 +99,12 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
             // Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
             //     serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
-            using var client = BuildHttpClient();
-            var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
-            // Logger.LogTrace("Delinea configuration: {@Configuration}",
-            //     config); //TODO: Commented out to avoid logging sensitive information
-            Logger.MethodExit();
-            return GetDelineaSecretAsync(client, config).Result;
+            using (var client = BuildHttpClient())
+            {
+                var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
+                Logger.MethodExit();
+                return GetDelineaSecretAsync(client, config).Result;
+            }
         }
 
         /// <summary>
