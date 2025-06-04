@@ -7,7 +7,8 @@ these authentication methods, see the
 
 ## Requirements
 
-- Delinea Secret Server service account or client credential w/ permission to access the secret(s) being used
+- Delinea Secret Server service account or client credential w/ permission to access the secret(s) being used. See the [Delinea
+  Secret Server documentation]([Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).) for more information on how to configure service accounts and client credentials.
 
 
 ## Mechanics

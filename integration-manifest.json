@@ -52,7 +52,7 @@
                 "DataType": 2,
                 "InstanceLevel": false
                 },
-                {
+            {
                 "Name": "GrantType",
                 "DisplayName": "Grant Type",
                 "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password` or `client_credentials`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatability.",
