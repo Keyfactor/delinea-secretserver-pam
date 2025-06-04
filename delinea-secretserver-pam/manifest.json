@@ -9,7 +9,10 @@
   },
   "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
     "Host": "https://example.secretservercloud.com/SecretServer",
-    "Username": "my_secretserver_service_account",
-    "Password": "xxxxxx"
+    "Username": "<USERNAME>",
+    "Password": "<PASSWORD>",
+    "ClientId": "<OAUTH_CLIENT_ID>",
+    "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+    "GrantType": "password|client_credentials"
   }
 }
