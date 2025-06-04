@@ -22,8 +22,8 @@ sequenceDiagram
     Command->>UO: Yes here's a job.
     UO->>Delinea: Hello here are my client credentials.
     Delinea->>UO: Here's your API token.
-    UO->>Delina: I need secret ID 100, here's my API token.
-    Delina->>Delina: Check secret ACL.
+    UO->>Delinea: I need secret ID 100, here's my API token.
+    Delinea->>Delinea: Check secret ACL.
     Delinea->>UO: This is allowed, here's the secret. 
 ```
 
