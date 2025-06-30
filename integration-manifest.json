@@ -5,7 +5,9 @@
   "status": "production",
   "support_level": "kf-supported",
   "link_github": true,
-  "update_catalog": true,
+  "update_catalog": true,  
+  "release_dir": "delinea-secretserver-pam/bin/Release",
+  "release_project": "delinea-secretserver-pam/delinea-secretserver-pam.csproj",
   "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
   "about": {
     "pam": {
@@ -20,30 +22,56 @@
             {
               "Name": "Host",
               "DisplayName": "Secret Server URL",
+              "Description": "The URL to the Secret Server instance. Example: https://example.secretservercloud.com/SecretServer",
               "DataType": 1,
               "InstanceLevel": false
             },
             {
               "Name": "Username",
               "DisplayName": "Secret Server Username",
+              "Description": "The username used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type.",
               "DataType": 2,
               "InstanceLevel": false
             },
             {
               "Name": "Password",
               "DisplayName": "Secret Server Password",
+              "Description": "The password used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type.",
               "DataType": 2,
               "InstanceLevel": false
             },
             {
+              "Name": "ClientId",
+              "DisplayName": "Secret Server Client ID",
+              "Description": "The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type.",
+              "DataType": 2,
+              "InstanceLevel": false
+            },
+            {
+                "Name": "ClientSecret",
+                "DisplayName": "Secret Server Client Secret",
+                "Description": "The client secret used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type.",
+                "DataType": 2,
+                "InstanceLevel": false
+                },
+            {
+                "Name": "GrantType",
+                "DisplayName": "Grant Type",
+                "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password` or `client_credentials`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatability.",
+                "DataType": 1,
+                "InstanceLevel": false
+            },
+            {
               "Name": "SecretId",
               "DisplayName": "Secret ID",
+              "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
               "DataType": 1,
               "InstanceLevel": true
             },
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -51,6 +79,5 @@
         }
       }
     }
-  },
-  "release_dir": "delinea-secretserver-pam\\bin\\Release"
+  }
 }
