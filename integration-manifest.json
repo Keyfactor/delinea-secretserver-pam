@@ -5,7 +5,9 @@
   "status": "production",
   "support_level": "kf-supported",
   "link_github": true,
-  "update_catalog": true,
+  "update_catalog": true,  
+  "release_dir": "delinea-secretserver-pam/bin/Release",
+  "release_project": "delinea-secretserver-pam/delinea-secretserver-pam.csproj",
   "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
   "about": {
     "pam": {
@@ -77,6 +79,5 @@
         }
       }
     }
-  },
-  "release_dir": "delinea-secretserver-pam\\bin\\Release"
+  }
 }
