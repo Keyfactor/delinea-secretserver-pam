@@ -119,8 +119,8 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         ///     Must be either 'password' or 'client_credentials'.
         ///     Defaults to 'password'.
         /// </summary>
-        [RegularExpression("^(password|client_credentials)$",
-            ErrorMessage = "GrantType must be 'password' or 'client_credentials'.")]
+        [RegularExpression("^(password|client_credentials|windows)$",
+            ErrorMessage = "GrantType must be 'password', 'client_credentials' or `windows`.")]
         public string GrantType { get; set; } = "password";
 
         /// <summary>
@@ -133,10 +133,34 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
             var hasUserPass = !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password);
             var hasClientCreds = !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 
-            if (!hasUserPass && !hasClientCreds)
-                yield return new ValidationResult(
-                    "Either Username and Password, or ClientId and ClientSecret must be provided.",
-                    new[] { nameof(Username), nameof(Password), nameof(ClientId), nameof(ClientSecret) });
+            switch (GrantType)
+            {
+                case "windows":
+                    if (hasUserPass || hasClientCreds)
+                        yield return new ValidationResult(
+                            "No credentials should be provided for 'windows' grant type.",
+                            new[] { nameof(Username), nameof(Password), nameof(ClientId), nameof(ClientSecret) });
+                    break;
+
+                case "password":
+                    if (!hasUserPass)
+                        yield return new ValidationResult(
+                            "Username and Password must be provided for 'password' grant type.",
+                            new[] { nameof(Username), nameof(Password) });
+                    break;
+
+                case "client_credentials":
+                    if (!hasClientCreds)
+                        yield return new ValidationResult(
+                            "ClientId and ClientSecret must be provided for 'client_credentials' grant type.",
+                            new[] { nameof(ClientId), nameof(ClientSecret) });
+                    break;
+                default:
+                    yield return new ValidationResult(
+                        "Invalid GrantType specified.",
+                        new[] { nameof(GrantType) });
+                    break;
+            }
         }
     }
 }
