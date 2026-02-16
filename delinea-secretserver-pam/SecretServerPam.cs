@@ -214,7 +214,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 {
                     Logger.LogError(
                         "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again");
-                    Logger.LogTrace("Response content: ${Response}", content);
+                    Logger.LogTrace("Response content: {Response}", content);
                     Logger.MethodExit();
                     throw new AuthenticationException(
                         "Authentication failed when attempting to retrieve secret from Delinea Secret Server. Please check your credentials and try again");
