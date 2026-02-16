@@ -6,7 +6,7 @@ these authentication methods, see the
 [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
 
 ## Authentication Methods
-For full details on each authentication method, please refer to the [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
+For full details on each authentication method, please refer to the [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
 Below are example `manifest.json` snippets for each supported authentication method.
 
 ### Password
