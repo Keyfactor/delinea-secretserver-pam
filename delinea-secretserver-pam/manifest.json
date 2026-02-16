@@ -13,6 +13,6 @@
     "Password": "<PASSWORD>",
     "ClientId": "<OAUTH_CLIENT_ID>",
     "ClientSecret": "<OAUTH_CLIENT_SECRET>",
-    "GrantType": "password|client_credentials"
+    "GrantType": "password|client_credentials|windows"
   }
 }
