@@ -120,7 +120,7 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         ///     Defaults to 'password'.
         /// </summary>
         [RegularExpression("^(password|client_credentials|windows)$",
-            ErrorMessage = "GrantType must be 'password', 'client_credentials' or `windows`.")]
+            ErrorMessage = "GrantType must be 'password', 'client_credentials' or 'windows'.")]
         public string GrantType { get; set; } = "password";
 
         /// <summary>
