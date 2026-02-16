@@ -213,7 +213,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (content != null && content.Contains("login-message"))
                 {
                     Logger.LogError(
-                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration try again");
+                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again");
                     Logger.LogTrace("Response content: ${Response}", content);
                     Logger.MethodExit();
                     throw new AuthenticationException(
