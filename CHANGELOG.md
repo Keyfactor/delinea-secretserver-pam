@@ -1,3 +1,8 @@
+# v1.2.0
+
+## Features
+- Added support for `windows` grant type for Integrated Windows Authentication (IWA). NOTE: IWA is not supported on Secret Server Cloud.
+
 # v1.1.0
 
 ## Features
