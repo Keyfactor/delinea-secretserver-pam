@@ -387,10 +387,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogDebug("Validating server configuration parameters");
             
             var grantType = "password";
-            if (connectionConfiguration.ContainsKey(DelineaConfiguration.GRANT_TYPE) &&
-                !string.IsNullOrEmpty(connectionConfiguration[DelineaConfiguration.GRANT_TYPE]))
+            if (connectionConfiguration.TryGetValue(DelineaConfiguration.GRANT_TYPE, out var configuredGrantType) &&
+                !string.IsNullOrEmpty(configuredGrantType))
             {
-                grantType = connectionConfiguration[DelineaConfiguration.GRANT_TYPE];
+                grantType = configuredGrantType;
             }
 
             // Validate Secret Server URL
