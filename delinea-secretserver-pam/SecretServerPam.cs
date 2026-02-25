@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using Keyfactor.Extensions.Pam.Delinea.Models;
 using Keyfactor.Logging;
@@ -99,9 +100,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
             // Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
             //     serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
-            using (var client = BuildHttpClient())
+            var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
+            using (var client = BuildHttpClient(config.GrantType))
             {
-                var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
                 Logger.MethodExit();
                 return GetDelineaSecretAsync(client, config).Result;
             }
@@ -121,21 +122,30 @@ namespace Keyfactor.Extensions.Pam.Delinea
             HttpResponseMessage response;
             Logger.LogDebug("Attempting to fetch access token from Delinea Secret Server at {SecretServerUrl}",
                 configurationInfo.SecretServerUrl);
-            var bearerToken = await GetAccessToken(client, configurationInfo).ConfigureAwait(false);
-
-            if (string.IsNullOrEmpty(bearerToken))
-            {
-                Logger.LogError("Unable to obtain access token from Delinea Secret Server");
-                Logger.MethodExit();
-                throw new InvalidTokenException("Unable to obtain access token from Delinea Secret Server");
-            }
-
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
 
             var secretUrl = $"{configurationInfo.SecretServerUrl}/api/v1/secrets/{configurationInfo.SecretId}";
+            switch (configurationInfo.GrantType)
+            {
+                case "windows":
+                    Logger.LogDebug("Using Windows Authentication to obtain access token");
+                    secretUrl = $"{configurationInfo.SecretServerUrl}/winauthwebservices/api/v1/secrets/{configurationInfo.SecretId}";
+                    break;
+                default: // password and client_credentials
+                    Logger.LogDebug("Using {GrantType} grant to obtain access token", configurationInfo.GrantType);
+                    var bearerToken = await GetAccessToken(client, configurationInfo).ConfigureAwait(false);
 
+                    if (string.IsNullOrEmpty(bearerToken))
+                    {
+                        Logger.LogError("Unable to obtain access token from Delinea Secret Server");
+                        Logger.MethodExit();
+                        throw new InvalidTokenException("Unable to obtain access token from Delinea Secret Server");
+                    }
+
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    break;
+            }
+            
             try
             {
                 Logger.LogDebug("Secret URL: {SecretUrl}", secretUrl);
@@ -163,6 +173,16 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 Logger.MethodExit();
                 throw;
             }
+            
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                Logger.LogError(
+                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
+                    ex.Message);
+                Logger.MethodExit();
+                throw new InvalidClientConfigurationException(
+                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server. Please ensure the application is running under a user context with access to Secret Server. For more information on windows auth please visit: https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm");
+            }
 
             var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
@@ -189,6 +209,15 @@ namespace Keyfactor.Extensions.Pam.Delinea
             }
             catch (Exception ex)
             {
+                if (content != null && content.Contains("login-message"))
+                {
+                    Logger.LogError(
+                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again");
+                    Logger.LogTrace("Response content: {Response}", content);
+                    Logger.MethodExit();
+                    throw new AuthenticationException(
+                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server. Please check your credentials and try again");
+                }
                 Logger.LogError(
                     "An error occurred while attempting to deserialize the Delinea Secret Server response: {ExMessage}",
                     ex.Message);
@@ -222,23 +251,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
             {
                 { "username", configurationInfo.Username },
                 { "password", configurationInfo.Password },
-                { "grant_type", "password" }
+                { "grant_type", "password" } // grant type is still "password" as far as the Delinea API is concerned
             };
 
-            //TODO: Add support for client credentials and refresh token
-            // var clientCreds = new Dictionary<string, string>
-            // {
-            //     { "client_id", configurationInfo.Username },
-            //     { "client_secret", configurationInfo.Password },
-            //     { "grant_type", "client_credentials" }
-            // };
-            //
-            // var refreshToken = new Dictionary<string, string>
-            // {
-            //     { "refresh_token", refreshToken },
-            //     { "grant_type", "refresh_token" },
-            //     { "client_id", configurationInfo.Username }
-            // };
 
             Logger.LogTrace("Authentication request grant type ${GrantType}", body["grant_type"]);
 
@@ -365,11 +380,17 @@ namespace Keyfactor.Extensions.Pam.Delinea
         ///     Thrown if required parameters are missing or invalid for the specified grant type.
         /// </exception>
         private bool ValidateServerConfigurationParams(
-            IReadOnlyDictionary<string, string> connectionConfiguration,
-            string grantType = "password")
+            IReadOnlyDictionary<string, string> connectionConfiguration)
         {
             Logger.MethodEntry();
             Logger.LogDebug("Validating server configuration parameters");
+            
+            var grantType = "password";
+            if (connectionConfiguration.TryGetValue(DelineaConfiguration.GRANT_TYPE, out var configuredGrantType) &&
+                !string.IsNullOrEmpty(configuredGrantType))
+            {
+                grantType = configuredGrantType;
+            }
 
             // Validate Secret Server URL
             ValidateRequiredParameter(connectionConfiguration,
@@ -387,6 +408,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     ValidateClientCredentialsGrantCredentials(connectionConfiguration);
                     break;
 
+                case "windows":
+                    Logger.LogDebug("Using Windows Authentication, no credentials to validate");
+                    break;
                 default:
                     Logger.LogError(
                         "Invalid grant type '{GrantType}' specified. Supported types are 'password' and 'client_credentials'",
@@ -514,7 +538,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         Username = connectionConfiguration[DelineaConfiguration.USERNAME],
                         Password = connectionConfiguration[DelineaConfiguration.PASSWORD],
                         SecretId = secretId,
-                        SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME]
+                        SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
+                        GrantType = "password"
                     };
 
                 case "client_credentials":
@@ -526,7 +551,18 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         ClientId = connectionConfiguration[DelineaConfiguration.CLIENT_ID],
                         ClientSecret = connectionConfiguration[DelineaConfiguration.CLIENT_SECRET],
                         SecretId = secretId,
-                        SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME]
+                        SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
+                        GrantType = "password"
+                    };
+                case "windows":
+                    Logger.LogDebug("Building Delinea configuration for windows grant type");
+                    Logger.MethodExit();
+                    return new DelineaConfiguration
+                    {
+                        SecretServerUrl = connectionConfiguration[DelineaConfiguration.SECRET_SERVER_URL],
+                        SecretId = secretId,
+                        SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
+                        GrantType = "windows"
                     };
 
                 default:
@@ -543,13 +579,16 @@ namespace Keyfactor.Extensions.Pam.Delinea
         ///     Creates and configures an HttpClient for communicating with Secret Server.
         /// </summary>
         /// <returns>A configured HttpClient with a 60-second timeout.</returns>
-        private static HttpClient BuildHttpClient()
+        private static HttpClient BuildHttpClient(string grantType)
         {
             var handler = new HttpClientHandler();
+            if (grantType == "windows")
+            {
+                handler.UseDefaultCredentials = true;
+            }
             var client = new HttpClient(handler, true);
 
             client.Timeout = new TimeSpan(0, 0, 60);
-
             return client;
         }
     }

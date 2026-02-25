@@ -35,6 +35,8 @@ internal class Program
                 initInfo.Add("ClientSecret",
                     Environment.GetEnvironmentVariable("SECRET_SERVER_CLIENT_SECRET") ?? "changeme!");
                 break;
+            case "windows":
+                break;
             default:
                 throw new Exception($"Unsupported Grant Type: {initInfo["GrantType"]}");
         }
