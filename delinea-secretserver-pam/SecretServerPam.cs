@@ -257,6 +257,12 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             Logger.LogTrace("Authentication request grant type ${GrantType}", body["grant_type"]);
 
+            var loggableBody = new Dictionary<string, string>(body);
+            foreach (var sensitiveKey in new[] { "password", "client_secret" })
+                if (loggableBody.ContainsKey(sensitiveKey))
+                    loggableBody[sensitiveKey] = "***";
+            Logger.LogDebug("Token request body: {RequestBody}", JsonConvert.SerializeObject(loggableBody));
+
             HttpResponseMessage response;
             var tokeUrl = $"{configurationInfo.SecretServerUrl}/oauth2/token";
 
@@ -269,7 +275,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .ConfigureAwait(false);
                 Logger.LogDebug("Request sent");
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    Logger.LogError(
+                        "Token request failed with status {StatusCode}. Raw response body: {ResponseBody}",
+                        (int)response.StatusCode, errorBody);
+                    response.EnsureSuccessStatusCode();
+                }
             }
 
             catch (HttpRequestException ex)

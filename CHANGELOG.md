@@ -1,3 +1,8 @@
+# v1.3.0
+
+## Improvements
+- Enhanced debug logging for token endpoint requests: the obfuscated request body (credentials redacted) and full raw response body are now logged on token request failures to aid troubleshooting.
+
 # v1.2.0
 
 ## Features
