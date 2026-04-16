@@ -14,7 +14,7 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
     ///     Configuration class for connecting to and retrieving secrets from Delinea Secret Server.
     ///     Supports authentication via username/password or client credentials.
     /// </summary>
-    internal class DelineaConfiguration : IValidatableObject
+    internal class DelineaConfiguration
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DelineaConfiguration" /> class with empty strings.
@@ -123,44 +123,5 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
             ErrorMessage = "GrantType must be 'password', 'client_credentials' or 'windows'.")]
         public string GrantType { get; set; } = "password";
 
-        /// <summary>
-        ///     Validates that the configuration has either username/password or client credentials for authentication.
-        /// </summary>
-        /// <param name="validationContext">The validation context.</param>
-        /// <returns>A collection of validation results.</returns>
-        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            var hasUserPass = !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password);
-            var hasClientCreds = !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
-
-            switch (GrantType)
-            {
-                case "windows":
-                    if (hasUserPass || hasClientCreds)
-                        yield return new ValidationResult(
-                            "No credentials should be provided for 'windows' grant type.",
-                            new[] { nameof(Username), nameof(Password), nameof(ClientId), nameof(ClientSecret) });
-                    break;
-
-                case "password":
-                    if (!hasUserPass)
-                        yield return new ValidationResult(
-                            "Username and Password must be provided for 'password' grant type.",
-                            new[] { nameof(Username), nameof(Password) });
-                    break;
-
-                case "client_credentials":
-                    if (!hasClientCreds)
-                        yield return new ValidationResult(
-                            "ClientId and ClientSecret must be provided for 'client_credentials' grant type.",
-                            new[] { nameof(ClientId), nameof(ClientSecret) });
-                    break;
-                default:
-                    yield return new ValidationResult(
-                        "Invalid GrantType specified.",
-                        new[] { nameof(GrantType) });
-                    break;
-            }
-        }
     }
 }
