@@ -76,6 +76,12 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         public static string SECRET_FIELD_NAME => "SecretFieldName";
 
         /// <summary>
+        ///     The configuration key for skipping TLS certificate validation.
+        ///     Use only in non-production environments with self-signed or expired certificates.
+        /// </summary>
+        public static string SKIP_TLS_VALIDATION => "SkipTlsValidation";
+
+        /// <summary>
         ///     The base URL of the Delinea Secret Server.
         /// </summary>
         [Required(ErrorMessage = "The SecretServerUrl field is required.")]
@@ -122,6 +128,12 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         [RegularExpression("^(password|client_credentials|windows)$",
             ErrorMessage = "GrantType must be 'password', 'client_credentials' or 'windows'.")]
         public string GrantType { get; set; } = "password";
+
+        /// <summary>
+        ///     When true, disables TLS certificate validation for Secret Server connections.
+        ///     Use only in non-production environments with self-signed or expired certificates.
+        /// </summary>
+        public bool SkipTlsValidation { get; set; } = false;
 
     }
 }

@@ -10,7 +10,6 @@
 - `Stopwatch` instances for the token POST and secret GET HTTP calls are now declared outside their try blocks; catch blocks record elapsed duration and emit a structured `HTTP call failed` log event so network failure timing is preserved in exception paths.
 - Removed the duplicate `SecretResponse` class defined inline at the bottom of `SecretServerPam.cs`. The canonical definition in `Models/SecretResponse.cs` (which includes `Id`, `Name`, `SecretTemplateId`, `FolderId`, and `Active` in addition to `Items`) is now the sole definition, resolved via the existing `using Keyfactor.Extensions.Pam.Delinea.Models;` import.
 - `Username` and `ClientId` parameters in `integration-manifest.json` changed from `DataType: 2` (secret/masked) to `DataType: 1` (plain text). These are non-secret identifiers and should not be stored or displayed as secrets in the Keyfactor Command UI.
-- TestConsole no longer provides hardcoded fallback values for `SECRET_SERVER_URL`, `SECRET_SERVER_USERNAME`, `SECRET_SERVER_PASSWORD`, `SECRET_SERVER_CLIENT_ID`, `SECRET_SERVER_CLIENT_SECRET`, and `SECRET_SERVER_SECRET_ID`. A `RequireEnv` helper is used for all six; missing variables throw `InvalidOperationException` immediately to prevent accidental runs against unintended targets.
 - Added inline comments at each `Environment.UserName` usage site documenting that this value reflects the OS service account identity, not the Keyfactor Command caller identity, since `IPAMProvider` does not expose caller context.
 
 ## Improvements
