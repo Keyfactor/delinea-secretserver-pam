@@ -168,7 +168,7 @@ Below is the payload to `POST` to the Keyfactor Command API
             "Name": "Username",
             "DisplayName": "Secret Server Username",
             "Description": "The username used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type.",
-            "DataType": 2,
+            "DataType": 1,
             "InstanceLevel": false
         },
         {
@@ -182,7 +182,7 @@ Below is the payload to `POST` to the Keyfactor Command API
             "Name": "ClientId",
             "DisplayName": "Secret Server Client ID",
             "Description": "The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type.",
-            "DataType": 2,
+            "DataType": 1,
             "InstanceLevel": false
         },
         {
