@@ -135,6 +135,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 case "windows":
                     Logger.LogDebug("Using Windows Authentication to obtain access token");
                     secretUrl = $"{configurationInfo.SecretServerUrl}/winauthwebservices/api/v1/secrets/{configurationInfo.SecretId}";
+                    Logger.LogInformation(
+                        "Windows authentication attempt | Identity={Identity} Machine={Machine} TargetUrl={TargetUrl} SecretId={SecretId}",
+                        Environment.UserName, Environment.MachineName, secretUrl, configurationInfo.SecretId);
                     break;
                 default: // password and client_credentials
                     Logger.LogDebug("Using {GrantType} grant to obtain access token", configurationInfo.GrantType);
