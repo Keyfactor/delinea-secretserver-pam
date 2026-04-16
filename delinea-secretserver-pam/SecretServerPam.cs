@@ -161,10 +161,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     break;
             }
 
+            var sw = Stopwatch.StartNew();
             try
             {
                 Logger.LogDebug("Secret URL: {SecretUrl}", secretUrl);
-                var sw = Stopwatch.StartNew();
                 response = await client
                     .GetAsync(new Uri(secretUrl)
                         .AbsoluteUri)
@@ -188,18 +188,20 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
-                    ex.Message, correlationId);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "GET", secretUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
 
             catch (System.ComponentModel.Win32Exception ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
-                    ex.Message, correlationId);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "GET", secretUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw new InvalidClientConfigurationException(
                     "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server. Please ensure the application is running under a user context with access to Secret Server. For more information on windows auth please visit: https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm");
@@ -294,11 +296,11 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             HttpResponseMessage response;
             var tokeUrl = $"{configurationInfo.SecretServerUrl}/oauth2/token";
+            var sw = Stopwatch.StartNew();
 
             try
             {
                 Logger.LogDebug("Requesting an access token from Secret Server at {TokenUrl}", tokeUrl);
-                var sw = Stopwatch.StartNew();
                 response = await client
                     .PostAsync(new Uri(tokeUrl).AbsoluteUri,
                         new FormUrlEncodedContent(body))
@@ -321,9 +323,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
-                    ex.Message, correlationId);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "POST", tokeUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
