@@ -304,9 +304,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var truncatedError = errorBody?.Length > 500 ? errorBody.Substring(0, 500) + "..." : errorBody;
                     Logger.LogError(
-                        "Token request failed with status {StatusCode}. Raw response body: {ResponseBody}",
-                        (int)response.StatusCode, errorBody);
+                        "Token request failed | StatusCode={StatusCode} ResponseBody={ResponseBody}",
+                        (int)response.StatusCode, truncatedError);
                     response.EnsureSuccessStatusCode();
                 }
             }
