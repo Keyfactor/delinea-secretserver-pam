@@ -336,7 +336,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 client.DefaultRequestHeaders.Accept.Clear();
 
                 Logger.LogTrace("Access token parsed");
-                if (token != null) return token;
+                if (token != null)
+                {
+                    Logger.LogInformation(
+                        "Authentication succeeded | Identity={Identity} Url={Url} AuthenticationResult=Success",
+                        string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username,
+                        configurationInfo.SecretServerUrl);
+                    return token;
+                }
                 Logger.LogError(
                     "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again",
                     configurationInfo.SecretServerUrl, configurationInfo.Username);
