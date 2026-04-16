@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -95,16 +97,20 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Dictionary<string, string> serverConfigurationParameters)
         {
             Logger.MethodEntry();
-            Logger.LogInformation("Starting Delinea Secret Server PAM Provider");
-            Logger.LogDebug("Getting password from Delinea Secret Server");
+            instanceParameters.TryGetValue(DelineaConfiguration.SECRET_ID, out var logSecretId);
+            instanceParameters.TryGetValue(DelineaConfiguration.SECRET_FIELD_NAME, out var logFieldName);
+            serverConfigurationParameters.TryGetValue(DelineaConfiguration.SECRET_SERVER_URL, out var logUrl);
+            serverConfigurationParameters.TryGetValue(DelineaConfiguration.GRANT_TYPE, out var logGrantType);
+            Logger.LogInformation(
+                "GetPassword invoked | SecretId={SecretId} Field={SecretFieldName} TargetUrl={Url} GrantType={GrantType} CallerIdentity={Identity} Host={Machine}",
+                logSecretId, logFieldName, logUrl, logGrantType ?? "password",
+                Environment.UserName, Environment.MachineName);
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
-            // Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
-            //     serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
             var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
             using (var client = BuildHttpClient(config.GrantType))
             {
                 Logger.MethodExit();
-                return GetDelineaSecretAsync(client, config).Result;
+                return GetDelineaSecretAsync(client, config).GetAwaiter().GetResult();
             }
         }
 
@@ -136,7 +142,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
                     if (string.IsNullOrEmpty(bearerToken))
                     {
-                        Logger.LogError("Unable to obtain access token from Delinea Secret Server");
+                        Logger.LogError(
+                            "Authentication failed: empty token received | Url={Url} GrantType={GrantType} Identity={Identity}",
+                            configurationInfo.SecretServerUrl, configurationInfo.GrantType,
+                            string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username);
                         Logger.MethodExit();
                         throw new InvalidTokenException("Unable to obtain access token from Delinea Secret Server");
                     }
@@ -149,17 +158,23 @@ namespace Keyfactor.Extensions.Pam.Delinea
             try
             {
                 Logger.LogDebug("Secret URL: {SecretUrl}", secretUrl);
+                var sw = Stopwatch.StartNew();
                 response = await client
                     .GetAsync(new Uri(secretUrl)
                         .AbsoluteUri)
                     .ConfigureAwait(false);
+                sw.Stop();
+                Logger.LogInformation(
+                    "Secret Server API call completed | Method=GET StatusCode={StatusCode} DurationMs={DurationMs} SecretId={SecretId}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds, configurationInfo.SecretId);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var truncated = errorContent?.Length > 500 ? errorContent.Substring(0, 500) + "..." : errorContent;
                     Logger.LogError(
-                        "Received non-success status code {StatusCode} from Secret Server. Response: {ResponseContent}",
-                        response.StatusCode, errorContent);
+                        "Received non-success status code {StatusCode} from Secret Server. Response (truncated): {ResponseContent}",
+                        (int)response.StatusCode, truncated);
                 }
 
                 response.EnsureSuccessStatusCode();
@@ -202,7 +217,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 // Logger.LogDebug("Secret value: {SecretValue}", secret);
                 if (!string.IsNullOrEmpty(secret))
                 {
-                    Logger.LogInformation("Successfully retrieved secret from Delinea Secret Server");
+                    Logger.LogInformation(
+                        "Credential retrieval succeeded | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url}",
+                        configurationInfo.SecretId, configurationInfo.SecretFieldName,
+                        configurationInfo.GrantType, configurationInfo.SecretServerUrl);
                     Logger.MethodExit();
                     return secret;
                 }
@@ -225,7 +243,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 throw;
             }
 
-            Logger.LogError("No secret was found or no items in the secret were of type password");
+            Logger.LogError(
+                "Credential retrieval failed: field not found in secret | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url}",
+                configurationInfo.SecretId, configurationInfo.SecretFieldName,
+                configurationInfo.GrantType, configurationInfo.SecretServerUrl);
             Logger.MethodExit();
             return "";
         }
@@ -269,11 +290,15 @@ namespace Keyfactor.Extensions.Pam.Delinea
             try
             {
                 Logger.LogDebug("Requesting an access token from Secret Server at {TokenUrl}", tokeUrl);
+                var sw = Stopwatch.StartNew();
                 response = await client
                     .PostAsync(new Uri(tokeUrl).AbsoluteUri,
                         new FormUrlEncodedContent(body))
                     .ConfigureAwait(false);
-                Logger.LogDebug("Request sent");
+                sw.Stop();
+                Logger.LogInformation(
+                    "Token endpoint call completed | Method=POST StatusCode={StatusCode} DurationMs={DurationMs}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -319,7 +344,6 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 Logger.LogError(
                     "An error occurred while attempting to deserialize the access token response: {ExMessage}",
                     ex.Message);
-                Logger.LogTrace("Response content: ${Response}", response.Content.ReadAsStringAsync().Result);
                 Logger.MethodExit();
                 throw;
             }
