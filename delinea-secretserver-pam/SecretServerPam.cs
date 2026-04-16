@@ -107,7 +107,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 Environment.UserName, Environment.MachineName);
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
             var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
-            using (var client = BuildHttpClient(config.GrantType))
+            using (var client = BuildHttpClient(config.GrantType, config.SkipTlsValidation))
             {
                 Logger.MethodExit();
                 return GetDelineaSecretAsync(client, config).GetAwaiter().GetResult();
@@ -248,7 +248,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 configurationInfo.SecretId, configurationInfo.SecretFieldName,
                 configurationInfo.GrantType, configurationInfo.SecretServerUrl);
             Logger.MethodExit();
-            return "";
+            throw new InvalidSecretConfigurationException(
+                $"Field '{configurationInfo.SecretFieldName}' not found in secret {configurationInfo.SecretId}. Verify the field name or slug exists on the secret template.");
         }
 
         /// <summary>
@@ -562,6 +563,11 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 grantType = "password";
             }
 
+            connectionConfiguration.TryGetValue(DelineaConfiguration.SKIP_TLS_VALIDATION, out var skipTlsRaw);
+            var skipTls = string.Equals(skipTlsRaw, "true", StringComparison.OrdinalIgnoreCase);
+            if (skipTls)
+                Logger.LogWarning("TLS certificate validation is disabled — use only in non-production environments");
+
             Logger.LogDebug("Building Delinea configuration");
             switch (grantType)
             {
@@ -576,7 +582,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         Password = connectionConfiguration[DelineaConfiguration.PASSWORD],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "password"
+                        GrantType = "password",
+                        SkipTlsValidation = skipTls
                     };
 
                 case "client_credentials":
@@ -589,7 +596,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         ClientSecret = connectionConfiguration[DelineaConfiguration.CLIENT_SECRET],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "password"
+                        GrantType = "password",
+                        SkipTlsValidation = skipTls
                     };
                 case "windows":
                     Logger.LogDebug("Building Delinea configuration for windows grant type");
@@ -599,7 +607,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         SecretServerUrl = connectionConfiguration[DelineaConfiguration.SECRET_SERVER_URL],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "windows"
+                        GrantType = "windows",
+                        SkipTlsValidation = skipTls
                     };
 
                 default:
@@ -616,15 +625,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
         ///     Creates and configures an HttpClient for communicating with Secret Server.
         /// </summary>
         /// <returns>A configured HttpClient with a 60-second timeout.</returns>
-        private static HttpClient BuildHttpClient(string grantType)
+        private static HttpClient BuildHttpClient(string grantType, bool skipTlsValidation = false)
         {
             var handler = new HttpClientHandler();
             if (grantType == "windows")
-            {
                 handler.UseDefaultCredentials = true;
-            }
+            if (skipTlsValidation)
+                handler.ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) => true;
             var client = new HttpClient(handler, true);
-
             client.Timeout = new TimeSpan(0, 0, 60);
             return client;
         }
