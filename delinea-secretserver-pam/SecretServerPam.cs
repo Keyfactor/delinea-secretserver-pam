@@ -105,12 +105,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 "GetPassword invoked | SecretId={SecretId} Field={SecretFieldName} TargetUrl={Url} GrantType={GrantType} CallerIdentity={Identity} Host={Machine}",
                 logSecretId, logFieldName, logUrl, logGrantType ?? "password",
                 Environment.UserName, Environment.MachineName);
+            var correlationId = Guid.NewGuid().ToString("N");
+            Logger.LogInformation("Operation correlation ID | CorrelationId={CorrelationId}", correlationId);
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
             var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
             using (var client = BuildHttpClient(config.GrantType, config.SkipTlsValidation))
             {
                 Logger.MethodExit();
-                return GetDelineaSecretAsync(client, config).GetAwaiter().GetResult();
+                return GetDelineaSecretAsync(client, config, correlationId).GetAwaiter().GetResult();
             }
         }
 
@@ -122,7 +124,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
         /// <returns>The value of the requested secret field.</returns>
         /// <exception cref="HttpRequestException">Thrown when the HTTP request to Secret Server fails.</exception>
         /// <exception cref="Exception">Thrown when deserializing the response fails or the requested secret is not found.</exception>
-        private async Task<string> GetDelineaSecretAsync(HttpClient client, DelineaConfiguration configurationInfo)
+        private async Task<string> GetDelineaSecretAsync(HttpClient client, DelineaConfiguration configurationInfo, string correlationId)
         {
             Logger.MethodEntry();
             HttpResponseMessage response;
@@ -136,19 +138,20 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     Logger.LogDebug("Using Windows Authentication to obtain access token");
                     secretUrl = $"{configurationInfo.SecretServerUrl}/winauthwebservices/api/v1/secrets/{configurationInfo.SecretId}";
                     Logger.LogInformation(
-                        "Windows authentication attempt | Identity={Identity} Machine={Machine} TargetUrl={TargetUrl} SecretId={SecretId}",
-                        Environment.UserName, Environment.MachineName, secretUrl, configurationInfo.SecretId);
+                        "Windows authentication attempt | Identity={Identity} Machine={Machine} TargetUrl={TargetUrl} SecretId={SecretId} CorrelationId={CorrelationId}",
+                        Environment.UserName, Environment.MachineName, secretUrl, configurationInfo.SecretId, correlationId);
                     break;
                 default: // password and client_credentials
                     Logger.LogDebug("Using {GrantType} grant to obtain access token", configurationInfo.GrantType);
-                    var bearerToken = await GetAccessToken(client, configurationInfo).ConfigureAwait(false);
+                    var bearerToken = await GetAccessToken(client, configurationInfo, correlationId).ConfigureAwait(false);
 
                     if (string.IsNullOrEmpty(bearerToken))
                     {
                         Logger.LogError(
-                            "Authentication failed: empty token received | Url={Url} GrantType={GrantType} Identity={Identity}",
+                            "Authentication failed: empty token received | Url={Url} GrantType={GrantType} Identity={Identity} CorrelationId={CorrelationId}",
                             configurationInfo.SecretServerUrl, configurationInfo.GrantType,
-                            string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username);
+                            string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username,
+                            correlationId);
                         Logger.MethodExit();
                         throw new InvalidTokenException("Unable to obtain access token from Delinea Secret Server");
                     }
@@ -157,7 +160,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     break;
             }
-            
+
             try
             {
                 Logger.LogDebug("Secret URL: {SecretUrl}", secretUrl);
@@ -168,16 +171,16 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .ConfigureAwait(false);
                 sw.Stop();
                 Logger.LogInformation(
-                    "Secret Server API call completed | Method=GET StatusCode={StatusCode} DurationMs={DurationMs} SecretId={SecretId}",
-                    (int)response.StatusCode, sw.ElapsedMilliseconds, configurationInfo.SecretId);
+                    "Secret Server API call completed | Method=GET StatusCode={StatusCode} DurationMs={DurationMs} SecretId={SecretId} CorrelationId={CorrelationId}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds, configurationInfo.SecretId, correlationId);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     var truncated = errorContent?.Length > 500 ? errorContent.Substring(0, 500) + "..." : errorContent;
                     Logger.LogError(
-                        "Received non-success status code {StatusCode} from Secret Server. Response (truncated): {ResponseContent}",
-                        (int)response.StatusCode, truncated);
+                        "Received non-success status code {StatusCode} from Secret Server. Response (truncated): {ResponseContent} CorrelationId={CorrelationId}",
+                        (int)response.StatusCode, truncated, correlationId);
                 }
 
                 response.EnsureSuccessStatusCode();
@@ -186,17 +189,17 @@ namespace Keyfactor.Extensions.Pam.Delinea
             catch (HttpRequestException ex)
             {
                 Logger.LogError(
-                    "An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
-            
+
             catch (System.ComponentModel.Win32Exception ex)
             {
                 Logger.LogError(
-                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw new InvalidClientConfigurationException(
                     "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server. Please ensure the application is running under a user context with access to Secret Server. For more information on windows auth please visit: https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm");
@@ -221,9 +224,9 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (!string.IsNullOrEmpty(secret))
                 {
                     Logger.LogInformation(
-                        "Credential retrieval succeeded | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url}",
+                        "Credential retrieval succeeded | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url} CorrelationId={CorrelationId}",
                         configurationInfo.SecretId, configurationInfo.SecretFieldName,
-                        configurationInfo.GrantType, configurationInfo.SecretServerUrl);
+                        configurationInfo.GrantType, configurationInfo.SecretServerUrl, correlationId);
                     Logger.MethodExit();
                     return secret;
                 }
@@ -233,23 +236,24 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (content != null && content.Contains("login-message"))
                 {
                     Logger.LogError(
-                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again");
+                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again CorrelationId={CorrelationId}",
+                        correlationId);
                     Logger.LogTrace("Response content: {Response}", content);
                     Logger.MethodExit();
                     throw new AuthenticationException(
                         "Authentication failed when attempting to retrieve secret from Delinea Secret Server. Please check your credentials and try again");
                 }
                 Logger.LogError(
-                    "An error occurred while attempting to deserialize the Delinea Secret Server response: {ExMessage}",
-                    ex.Message);
+                    "An error occurred while attempting to deserialize the Delinea Secret Server response: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
 
             Logger.LogError(
-                "Credential retrieval failed: field not found in secret | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url}",
+                "Credential retrieval failed: field not found in secret | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url} CorrelationId={CorrelationId}",
                 configurationInfo.SecretId, configurationInfo.SecretFieldName,
-                configurationInfo.GrantType, configurationInfo.SecretServerUrl);
+                configurationInfo.GrantType, configurationInfo.SecretServerUrl, correlationId);
             Logger.MethodExit();
             throw new InvalidSecretConfigurationException(
                 $"Field '{configurationInfo.SecretFieldName}' not found in secret {configurationInfo.SecretId}. Verify the field name or slug exists on the secret template.");
@@ -265,7 +269,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
         /// <exception cref="InvalidTokenException">Thrown when the token cannot be obtained or parsed from the response.</exception>
         /// <exception cref="Exception">Thrown when deserializing the token response fails.</exception>
         /// <remarks>Currently only supports password grant type authentication.</remarks>
-        private async Task<string> GetAccessToken(HttpClient client, DelineaConfiguration configurationInfo)
+        private async Task<string> GetAccessToken(HttpClient client, DelineaConfiguration configurationInfo, string correlationId)
         {
             Logger.MethodEntry();
 
@@ -301,16 +305,16 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .ConfigureAwait(false);
                 sw.Stop();
                 Logger.LogInformation(
-                    "Token endpoint call completed | Method=POST StatusCode={StatusCode} DurationMs={DurationMs}",
-                    (int)response.StatusCode, sw.ElapsedMilliseconds);
+                    "Token endpoint call completed | Method=POST StatusCode={StatusCode} DurationMs={DurationMs} CorrelationId={CorrelationId}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds, correlationId);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     var truncatedError = errorBody?.Length > 500 ? errorBody.Substring(0, 500) + "..." : errorBody;
                     Logger.LogError(
-                        "Token request failed | StatusCode={StatusCode} ResponseBody={ResponseBody}",
-                        (int)response.StatusCode, truncatedError);
+                        "Token request failed | StatusCode={StatusCode} ResponseBody={ResponseBody} CorrelationId={CorrelationId}",
+                        (int)response.StatusCode, truncatedError, correlationId);
                     response.EnsureSuccessStatusCode();
                 }
             }
@@ -318,8 +322,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
             catch (HttpRequestException ex)
             {
                 Logger.LogError(
-                    "An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
@@ -339,14 +343,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (token != null)
                 {
                     Logger.LogInformation(
-                        "Authentication succeeded | Identity={Identity} Url={Url} AuthenticationResult=Success",
+                        "Authentication succeeded | Identity={Identity} Url={Url} AuthenticationResult=Success CorrelationId={CorrelationId}",
                         string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username,
-                        configurationInfo.SecretServerUrl);
+                        configurationInfo.SecretServerUrl, correlationId);
                     return token;
                 }
                 Logger.LogError(
-                    "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again",
-                    configurationInfo.SecretServerUrl, configurationInfo.Username);
+                    "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again CorrelationId={CorrelationId}",
+                    configurationInfo.SecretServerUrl, configurationInfo.Username, correlationId);
                 Logger.MethodExit();
                 throw new InvalidTokenException(
                     $"Unable to generate access token from Delinea Secret Server '{configurationInfo.SecretServerUrl}' as '{configurationInfo.Username}'. Please check your credentials and try again");
@@ -354,8 +358,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
             catch (Exception ex)
             {
                 Logger.LogError(
-                    "An error occurred while attempting to deserialize the access token response: {ExMessage}",
-                    ex.Message);
+                    "An error occurred while attempting to deserialize the access token response: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
