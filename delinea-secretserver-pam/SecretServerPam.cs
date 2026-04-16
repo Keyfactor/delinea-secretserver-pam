@@ -656,18 +656,4 @@ namespace Keyfactor.Extensions.Pam.Delinea
         }
     }
 
-    /// <summary>
-    ///     Represents the response object from a Secret Server get secret API call.
-    /// </summary>
-    /// <remarks>
-    ///     This class is used to deserialize the JSON response from the Secret Server API.
-    /// </remarks>
-    internal class SecretResponse
-    {
-        /// <summary>
-        ///     Gets or sets the collection of secret items (fields) in the response.
-        /// </summary>
-        [JsonProperty("items")]
-        public List<DelineaSecret> Items { get; set; } = new List<DelineaSecret>();
-    }
 }
