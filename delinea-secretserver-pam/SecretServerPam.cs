@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -95,16 +97,23 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Dictionary<string, string> serverConfigurationParameters)
         {
             Logger.MethodEntry();
-            Logger.LogInformation("Starting Delinea Secret Server PAM Provider");
-            Logger.LogDebug("Getting password from Delinea Secret Server");
+            instanceParameters.TryGetValue(DelineaConfiguration.SECRET_ID, out var logSecretId);
+            instanceParameters.TryGetValue(DelineaConfiguration.SECRET_FIELD_NAME, out var logFieldName);
+            serverConfigurationParameters.TryGetValue(DelineaConfiguration.SECRET_SERVER_URL, out var logUrl);
+            serverConfigurationParameters.TryGetValue(DelineaConfiguration.GRANT_TYPE, out var logGrantType);
+            // UserName is the OS service account identity — IPAMProvider does not expose the Keyfactor caller
+            Logger.LogInformation(
+                "GetPassword invoked | SecretId={SecretId} Field={SecretFieldName} TargetUrl={Url} GrantType={GrantType} CallerIdentity={Identity} Host={Machine}",
+                logSecretId, logFieldName, logUrl, logGrantType ?? "password",
+                Environment.UserName, Environment.MachineName);
+            var correlationId = Guid.NewGuid().ToString("N");
+            Logger.LogInformation("Operation correlation ID | CorrelationId={CorrelationId}", correlationId);
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
-            // Logger.LogTrace("initializationInfo: {@ServerConfigurationParameters}",
-            //     serverConfigurationParameters); // TODO: Commented out to avoid logging sensitive information
             var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
-            using (var client = BuildHttpClient(config.GrantType))
+            using (var client = BuildHttpClient(config.GrantType, config.SkipTlsValidation))
             {
                 Logger.MethodExit();
-                return GetDelineaSecretAsync(client, config).Result;
+                return GetDelineaSecretAsync(client, config, correlationId).GetAwaiter().GetResult();
             }
         }
 
@@ -116,7 +125,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
         /// <returns>The value of the requested secret field.</returns>
         /// <exception cref="HttpRequestException">Thrown when the HTTP request to Secret Server fails.</exception>
         /// <exception cref="Exception">Thrown when deserializing the response fails or the requested secret is not found.</exception>
-        private async Task<string> GetDelineaSecretAsync(HttpClient client, DelineaConfiguration configurationInfo)
+        private async Task<string> GetDelineaSecretAsync(HttpClient client, DelineaConfiguration configurationInfo, string correlationId)
         {
             Logger.MethodEntry();
             HttpResponseMessage response;
@@ -129,14 +138,22 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 case "windows":
                     Logger.LogDebug("Using Windows Authentication to obtain access token");
                     secretUrl = $"{configurationInfo.SecretServerUrl}/winauthwebservices/api/v1/secrets/{configurationInfo.SecretId}";
+                    // UserName is the OS service account identity — IPAMProvider does not expose the Keyfactor caller
+                    Logger.LogInformation(
+                        "Windows authentication attempt | Identity={Identity} Machine={Machine} TargetUrl={TargetUrl} SecretId={SecretId} CorrelationId={CorrelationId}",
+                        Environment.UserName, Environment.MachineName, secretUrl, configurationInfo.SecretId, correlationId);
                     break;
                 default: // password and client_credentials
                     Logger.LogDebug("Using {GrantType} grant to obtain access token", configurationInfo.GrantType);
-                    var bearerToken = await GetAccessToken(client, configurationInfo).ConfigureAwait(false);
+                    var bearerToken = await GetAccessToken(client, configurationInfo, correlationId).ConfigureAwait(false);
 
                     if (string.IsNullOrEmpty(bearerToken))
                     {
-                        Logger.LogError("Unable to obtain access token from Delinea Secret Server");
+                        Logger.LogError(
+                            "Authentication failed: empty token received | Url={Url} GrantType={GrantType} Identity={Identity} CorrelationId={CorrelationId}",
+                            configurationInfo.SecretServerUrl, configurationInfo.GrantType,
+                            string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username,
+                            correlationId);
                         Logger.MethodExit();
                         throw new InvalidTokenException("Unable to obtain access token from Delinea Secret Server");
                     }
@@ -145,7 +162,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     break;
             }
-            
+
+            var sw = Stopwatch.StartNew();
             try
             {
                 Logger.LogDebug("Secret URL: {SecretUrl}", secretUrl);
@@ -153,13 +171,18 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .GetAsync(new Uri(secretUrl)
                         .AbsoluteUri)
                     .ConfigureAwait(false);
+                sw.Stop();
+                Logger.LogInformation(
+                    "Secret Server API call completed | Method=GET StatusCode={StatusCode} DurationMs={DurationMs} SecretId={SecretId} CorrelationId={CorrelationId}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds, configurationInfo.SecretId, correlationId);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var truncated = errorContent?.Length > 500 ? errorContent.Substring(0, 500) + "..." : errorContent;
                     Logger.LogError(
-                        "Received non-success status code {StatusCode} from Secret Server. Response: {ResponseContent}",
-                        response.StatusCode, errorContent);
+                        "Received non-success status code {StatusCode} from Secret Server. Response (truncated): {ResponseContent} CorrelationId={CorrelationId}",
+                        (int)response.StatusCode, truncated, correlationId);
                 }
 
                 response.EnsureSuccessStatusCode();
@@ -167,18 +190,20 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             catch (HttpRequestException ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "An error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "GET", secretUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
-            
+
             catch (System.ComponentModel.Win32Exception ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "GET", secretUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw new InvalidClientConfigurationException(
                     "A Windows authentication error occurred while attempting to communicate with Delinea Secret Server. Please ensure the application is running under a user context with access to Secret Server. For more information on windows auth please visit: https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm");
@@ -202,7 +227,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 // Logger.LogDebug("Secret value: {SecretValue}", secret);
                 if (!string.IsNullOrEmpty(secret))
                 {
-                    Logger.LogInformation("Successfully retrieved secret from Delinea Secret Server");
+                    Logger.LogInformation(
+                        "Credential retrieval succeeded | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url} CorrelationId={CorrelationId}",
+                        configurationInfo.SecretId, configurationInfo.SecretFieldName,
+                        configurationInfo.GrantType, configurationInfo.SecretServerUrl, correlationId);
                     Logger.MethodExit();
                     return secret;
                 }
@@ -212,22 +240,27 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 if (content != null && content.Contains("login-message"))
                 {
                     Logger.LogError(
-                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again");
+                        "Authentication failed when attempting to retrieve secret from Delinea Secret Server, please check your credentials and configuration and try again CorrelationId={CorrelationId}",
+                        correlationId);
                     Logger.LogTrace("Response content: {Response}", content);
                     Logger.MethodExit();
                     throw new AuthenticationException(
                         "Authentication failed when attempting to retrieve secret from Delinea Secret Server. Please check your credentials and try again");
                 }
                 Logger.LogError(
-                    "An error occurred while attempting to deserialize the Delinea Secret Server response: {ExMessage}",
-                    ex.Message);
+                    "An error occurred while attempting to deserialize the Delinea Secret Server response: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
 
-            Logger.LogError("No secret was found or no items in the secret were of type password");
+            Logger.LogError(
+                "Credential retrieval failed: field not found in secret | SecretId={SecretId} Field={SecretFieldName} GrantType={GrantType} Url={Url} CorrelationId={CorrelationId}",
+                configurationInfo.SecretId, configurationInfo.SecretFieldName,
+                configurationInfo.GrantType, configurationInfo.SecretServerUrl, correlationId);
             Logger.MethodExit();
-            return "";
+            throw new InvalidSecretConfigurationException(
+                $"Field '{configurationInfo.SecretFieldName}' not found in secret {configurationInfo.SecretId}. Verify the field name or slug exists on the secret template.");
         }
 
         /// <summary>
@@ -240,7 +273,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
         /// <exception cref="InvalidTokenException">Thrown when the token cannot be obtained or parsed from the response.</exception>
         /// <exception cref="Exception">Thrown when deserializing the token response fails.</exception>
         /// <remarks>Currently only supports password grant type authentication.</remarks>
-        private async Task<string> GetAccessToken(HttpClient client, DelineaConfiguration configurationInfo)
+        private async Task<string> GetAccessToken(HttpClient client, DelineaConfiguration configurationInfo, string correlationId)
         {
             Logger.MethodEntry();
 
@@ -257,8 +290,15 @@ namespace Keyfactor.Extensions.Pam.Delinea
 
             Logger.LogTrace("Authentication request grant type ${GrantType}", body["grant_type"]);
 
+            var loggableBody = new Dictionary<string, string>(body);
+            foreach (var sensitiveKey in new[] { "password", "client_secret" })
+                if (loggableBody.ContainsKey(sensitiveKey))
+                    loggableBody[sensitiveKey] = "***";
+            Logger.LogDebug("Token request body: {RequestBody}", JsonConvert.SerializeObject(loggableBody));
+
             HttpResponseMessage response;
             var tokeUrl = $"{configurationInfo.SecretServerUrl}/oauth2/token";
+            var sw = Stopwatch.StartNew();
 
             try
             {
@@ -267,16 +307,28 @@ namespace Keyfactor.Extensions.Pam.Delinea
                     .PostAsync(new Uri(tokeUrl).AbsoluteUri,
                         new FormUrlEncodedContent(body))
                     .ConfigureAwait(false);
-                Logger.LogDebug("Request sent");
+                sw.Stop();
+                Logger.LogInformation(
+                    "Token endpoint call completed | Method=POST StatusCode={StatusCode} DurationMs={DurationMs} CorrelationId={CorrelationId}",
+                    (int)response.StatusCode, sw.ElapsedMilliseconds, correlationId);
 
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var truncatedError = errorBody?.Length > 500 ? errorBody.Substring(0, 500) + "..." : errorBody;
+                    Logger.LogError(
+                        "Token request failed | StatusCode={StatusCode} ResponseBody={ResponseBody} CorrelationId={CorrelationId}",
+                        (int)response.StatusCode, truncatedError, correlationId);
+                    response.EnsureSuccessStatusCode();
+                }
             }
 
             catch (HttpRequestException ex)
             {
+                sw.Stop();
                 Logger.LogError(
-                    "An error occurred while attempting to fetch an access token from Delinea Secret Server: {ExMessage}",
-                    ex.Message);
+                    "HTTP call failed | Method={Method} Url={Url} DurationMs={DurationMs} Error={ExMessage} CorrelationId={CorrelationId}",
+                    "POST", tokeUrl, sw.ElapsedMilliseconds, ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
@@ -293,10 +345,17 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 client.DefaultRequestHeaders.Accept.Clear();
 
                 Logger.LogTrace("Access token parsed");
-                if (token != null) return token;
+                if (token != null)
+                {
+                    Logger.LogInformation(
+                        "Authentication succeeded | Identity={Identity} Url={Url} AuthenticationResult=Success CorrelationId={CorrelationId}",
+                        string.IsNullOrEmpty(configurationInfo.Username) ? configurationInfo.ClientId : configurationInfo.Username,
+                        configurationInfo.SecretServerUrl, correlationId);
+                    return token;
+                }
                 Logger.LogError(
-                    "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again",
-                    configurationInfo.SecretServerUrl, configurationInfo.Username);
+                    "Unable to generate access token from Delinea Secret Server \'{ConfigurationInfoSecretServerUrl}\' as \'{ConfigurationInfoUsername}\'. Please check your credentials and try again CorrelationId={CorrelationId}",
+                    configurationInfo.SecretServerUrl, configurationInfo.Username, correlationId);
                 Logger.MethodExit();
                 throw new InvalidTokenException(
                     $"Unable to generate access token from Delinea Secret Server '{configurationInfo.SecretServerUrl}' as '{configurationInfo.Username}'. Please check your credentials and try again");
@@ -304,9 +363,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
             catch (Exception ex)
             {
                 Logger.LogError(
-                    "An error occurred while attempting to deserialize the access token response: {ExMessage}",
-                    ex.Message);
-                Logger.LogTrace("Response content: ${Response}", response.Content.ReadAsStringAsync().Result);
+                    "An error occurred while attempting to deserialize the access token response: {ExMessage} CorrelationId={CorrelationId}",
+                    ex.Message, correlationId);
                 Logger.MethodExit();
                 throw;
             }
@@ -525,6 +583,11 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 grantType = "password";
             }
 
+            connectionConfiguration.TryGetValue(DelineaConfiguration.SKIP_TLS_VALIDATION, out var skipTlsRaw);
+            var skipTls = string.Equals(skipTlsRaw, "true", StringComparison.OrdinalIgnoreCase);
+            if (skipTls)
+                Logger.LogWarning("TLS certificate validation is disabled — use only in non-production environments");
+
             Logger.LogDebug("Building Delinea configuration");
             switch (grantType)
             {
@@ -539,7 +602,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         Password = connectionConfiguration[DelineaConfiguration.PASSWORD],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "password"
+                        GrantType = "password",
+                        SkipTlsValidation = skipTls
                     };
 
                 case "client_credentials":
@@ -552,7 +616,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         ClientSecret = connectionConfiguration[DelineaConfiguration.CLIENT_SECRET],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "password"
+                        GrantType = "password",
+                        SkipTlsValidation = skipTls
                     };
                 case "windows":
                     Logger.LogDebug("Building Delinea configuration for windows grant type");
@@ -562,7 +627,8 @@ namespace Keyfactor.Extensions.Pam.Delinea
                         SecretServerUrl = connectionConfiguration[DelineaConfiguration.SECRET_SERVER_URL],
                         SecretId = secretId,
                         SecretFieldName = instanceParameters[DelineaConfiguration.SECRET_FIELD_NAME],
-                        GrantType = "windows"
+                        GrantType = "windows",
+                        SkipTlsValidation = skipTls
                     };
 
                 default:
@@ -579,32 +645,17 @@ namespace Keyfactor.Extensions.Pam.Delinea
         ///     Creates and configures an HttpClient for communicating with Secret Server.
         /// </summary>
         /// <returns>A configured HttpClient with a 60-second timeout.</returns>
-        private static HttpClient BuildHttpClient(string grantType)
+        private static HttpClient BuildHttpClient(string grantType, bool skipTlsValidation = false)
         {
             var handler = new HttpClientHandler();
             if (grantType == "windows")
-            {
                 handler.UseDefaultCredentials = true;
-            }
+            if (skipTlsValidation)
+                handler.ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) => true;
             var client = new HttpClient(handler, true);
-
             client.Timeout = new TimeSpan(0, 0, 60);
             return client;
         }
     }
 
-    /// <summary>
-    ///     Represents the response object from a Secret Server get secret API call.
-    /// </summary>
-    /// <remarks>
-    ///     This class is used to deserialize the JSON response from the Secret Server API.
-    /// </remarks>
-    internal class SecretResponse
-    {
-        /// <summary>
-        ///     Gets or sets the collection of secret items (fields) in the response.
-        /// </summary>
-        [JsonProperty("items")]
-        public List<DelineaSecret> Items { get; set; } = new List<DelineaSecret>();
-    }
 }
