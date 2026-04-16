@@ -101,6 +101,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
             instanceParameters.TryGetValue(DelineaConfiguration.SECRET_FIELD_NAME, out var logFieldName);
             serverConfigurationParameters.TryGetValue(DelineaConfiguration.SECRET_SERVER_URL, out var logUrl);
             serverConfigurationParameters.TryGetValue(DelineaConfiguration.GRANT_TYPE, out var logGrantType);
+            // UserName is the OS service account identity — IPAMProvider does not expose the Keyfactor caller
             Logger.LogInformation(
                 "GetPassword invoked | SecretId={SecretId} Field={SecretFieldName} TargetUrl={Url} GrantType={GrantType} CallerIdentity={Identity} Host={Machine}",
                 logSecretId, logFieldName, logUrl, logGrantType ?? "password",
@@ -137,6 +138,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 case "windows":
                     Logger.LogDebug("Using Windows Authentication to obtain access token");
                     secretUrl = $"{configurationInfo.SecretServerUrl}/winauthwebservices/api/v1/secrets/{configurationInfo.SecretId}";
+                    // UserName is the OS service account identity — IPAMProvider does not expose the Keyfactor caller
                     Logger.LogInformation(
                         "Windows authentication attempt | Identity={Identity} Machine={Machine} TargetUrl={TargetUrl} SecretId={SecretId} CorrelationId={CorrelationId}",
                         Environment.UserName, Environment.MachineName, secretUrl, configurationInfo.SecretId, correlationId);
