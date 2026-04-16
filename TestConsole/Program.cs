@@ -48,6 +48,6 @@ internal class Program
         instanceParams["SecretFieldName"] = "password";
         var password = pam.GetPassword(instanceParams, initInfo);
         Console.WriteLine($"ServerUsername: {username}");
-        Console.WriteLine($"ServerPassword: {password}");
+        Console.WriteLine($"ServerPassword: {new string('*', password?.Length ?? 0)} (len={password?.Length ?? 0})");
     }
 }
