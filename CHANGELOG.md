@@ -28,7 +28,6 @@
 - Removed dead `IValidatableObject` implementation from `DelineaConfiguration`; validation is enforced in `ValidateServerConfigurationParams`.
 - Masked password value in TestConsole output.
 - Bumped TestConsole target framework to net10.0 and global SDK pin to 10.0.0.
-- Added `.env`, `scripts/`, and `client_pam.json` to `.gitignore`.
 
 # v1.2.0
 
