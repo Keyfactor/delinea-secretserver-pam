@@ -11,6 +11,10 @@ namespace TestConsole;
 
 internal class Program
 {
+    static string RequireEnv(string name) =>
+        Environment.GetEnvironmentVariable(name)
+        ?? throw new InvalidOperationException($"Required environment variable '{name}' is not set.");
+
     private static void Main(string[] args)
     {
         var pam = new SecretServerPam();
@@ -19,21 +23,19 @@ internal class Program
         var instanceParams = new Dictionary<string, string>();
 
         //Read SecretServerUrl from environment variable
-        initInfo.Add("Host",
-            Environment.GetEnvironmentVariable("SECRET_SERVER_URL") ?? "https://keyfactor.secretservercloud.com");
-        //Read Username from environment variable
+        initInfo.Add("Host", RequireEnv("SECRET_SERVER_URL"));
+        //Read GrantType from environment variable
         initInfo.Add("GrantType", Environment.GetEnvironmentVariable("SECRET_SERVER_GRANT_TYPE") ?? "password");
 
         switch (initInfo["GrantType"])
         {
             case "password":
-                initInfo.Add("Username", Environment.GetEnvironmentVariable("SECRET_SERVER_USERNAME") ?? "pam-tester");
-                initInfo.Add("Password", Environment.GetEnvironmentVariable("SECRET_SERVER_PASSWORD") ?? "changeme!");
+                initInfo.Add("Username", RequireEnv("SECRET_SERVER_USERNAME"));
+                initInfo.Add("Password", RequireEnv("SECRET_SERVER_PASSWORD"));
                 break;
             case "client_credentials":
-                initInfo.Add("ClientId", Environment.GetEnvironmentVariable("SECRET_SERVER_CLIENT_ID") ?? "pam-tester");
-                initInfo.Add("ClientSecret",
-                    Environment.GetEnvironmentVariable("SECRET_SERVER_CLIENT_SECRET") ?? "changeme!");
+                initInfo.Add("ClientId", RequireEnv("SECRET_SERVER_CLIENT_ID"));
+                initInfo.Add("ClientSecret", RequireEnv("SECRET_SERVER_CLIENT_SECRET"));
                 break;
             case "windows":
                 break;
@@ -41,13 +43,16 @@ internal class Program
                 throw new Exception($"Unsupported Grant Type: {initInfo["GrantType"]}");
         }
 
+        if (string.Equals(Environment.GetEnvironmentVariable("SECRET_SERVER_SKIP_TLS_VALIDATION"), "true", StringComparison.OrdinalIgnoreCase))
+            initInfo.Add("SkipTlsValidation", "true");
+
         //Read SecretId from environment variable
-        instanceParams.Add("SecretId", Environment.GetEnvironmentVariable("SECRET_SERVER_SECRET_ID") ?? "1");
+        instanceParams.Add("SecretId", RequireEnv("SECRET_SERVER_SECRET_ID"));
         instanceParams.Add("SecretFieldName", "username");
         var username = pam.GetPassword(instanceParams, initInfo);
         instanceParams["SecretFieldName"] = "password";
         var password = pam.GetPassword(instanceParams, initInfo);
         Console.WriteLine($"ServerUsername: {username}");
-        Console.WriteLine($"ServerPassword: {password}");
+        Console.WriteLine($"ServerPassword: {new string('*', password?.Length ?? 0)} (len={password?.Length ?? 0})");
     }
 }
