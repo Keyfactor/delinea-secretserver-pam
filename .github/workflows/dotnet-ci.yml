@@ -18,6 +18,9 @@ jobs:
         with:
           dotnet-version: '10.x'
 
+      - name: Add Keyfactor NuGet feed
+        run: dotnet nuget add source https://nuget.pkg.github.com/Keyfactor/index.json -n github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
       - name: Build
         run: dotnet build delinea-secretserver-pam.sln -c Release
 
@@ -38,6 +41,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
+
+      - name: Add Keyfactor NuGet feed
+        run: dotnet nuget add source https://nuget.pkg.github.com/Keyfactor/index.json -n github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
 
       - name: Build
         run: dotnet build delinea-secretserver-pam.sln -c Release
