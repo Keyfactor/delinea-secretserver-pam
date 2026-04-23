@@ -1035,5 +1035,27 @@ public class SecretServerPamTests
                 Environment.SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", null);
             }
         }
+
+        [IntegrationFact]
+        public void LiveServer_NaDummyValuesInConnectionConfig_IgnoredAndSecretRetrieved()
+        {
+            // Verifies that N/A dummy values for fields irrelevant to the password flow
+            // are silently stripped and do not cause authentication or retrieval failures.
+            var sut = new SecretServerPamPassword();
+            var result = sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", Env("SECRET_SERVER_SECRET_ID") }, { "SecretFieldName", "username" } },
+                new Dictionary<string, string>
+                {
+                    { "Host", Env("SECRET_SERVER_URL") },
+                    { "Username", Env("SECRET_SERVER_USERNAME") },
+                    { "Password", Env("SECRET_SERVER_PASSWORD") },
+                    { "SkipTlsValidation", SkipTls ? "true" : "false" },
+                    { "ClientId", "N/A" },
+                    { "ClientSecret", "N/A" },
+                    { "GrantType", "N/A" }
+                });
+
+            result.Should().NotBeNullOrEmpty("N/A dummy values for inapplicable fields must not prevent secret retrieval");
+        }
     }
 }
