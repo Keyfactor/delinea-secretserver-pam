@@ -7,4 +7,4 @@ riderModule.iml
 .vs/
 .env
 scripts/
-client_pam.json
+client_pam.jsonterraform/
