@@ -799,4 +799,129 @@ public class SecretServerPamTests
             names.Should().OnlyHaveUniqueItems("all PAM type Names must be distinct");
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // SkipTlsValidation — config parameter and environment variable
+    // ---------------------------------------------------------------------------
+
+    public class SkipTlsValidation : IDisposable
+    {
+        private const string EnvVar = "KEYFACTOR_PAM_SKIP_TLS_VALIDATION";
+
+        public void Dispose() => Environment.SetEnvironmentVariable(EnvVar, null);
+
+        private static Dictionary<string, string> InstanceParams() => new()
+        {
+            { "SecretId", FakeSecretId },
+            { "SecretFieldName", FakeFieldName }
+        };
+
+        private static Dictionary<string, string> ServerParams(bool skipTls = false) => new()
+        {
+            { "Host", FakeHost },
+            { "Username", FakeUsername },
+            { "Password", FakePassword },
+            { "SkipTlsValidation", skipTls ? "true" : "false" }
+        };
+
+        [Fact]
+        public void GetPassword_SkipTlsValidationConfig_True_Succeeds()
+        {
+            var handler = TwoStageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildTokenResponse()) },
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildSecretResponse()) });
+
+            var sut = new SecretServerPamPassword(new HttpClient(handler), NullLogger);
+            var result = sut.GetPassword(InstanceParams(), ServerParams(skipTls: true));
+            result.Should().Be(FakeFieldValue);
+        }
+
+        [Fact]
+        public void GetPassword_SkipTlsEnvVar_True_Succeeds()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, "true");
+
+            var handler = TwoStageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildTokenResponse()) },
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildSecretResponse()) });
+
+            var sut = new SecretServerPamPassword(new HttpClient(handler), NullLogger);
+            var result = sut.GetPassword(InstanceParams(), ServerParams(skipTls: false));
+            result.Should().Be(FakeFieldValue);
+        }
+
+        [Fact]
+        public void GetPassword_SkipTlsEnvVar_One_Succeeds()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, "1");
+
+            var handler = TwoStageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildTokenResponse()) },
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildSecretResponse()) });
+
+            var sut = new SecretServerPamPassword(new HttpClient(handler), NullLogger);
+            var result = sut.GetPassword(InstanceParams(), ServerParams(skipTls: false));
+            result.Should().Be(FakeFieldValue);
+        }
+
+        [Fact]
+        public void GetPassword_SkipTlsEnvVar_False_DoesNotOverrideConfigFalse()
+        {
+            Environment.SetEnvironmentVariable(EnvVar, "false");
+
+            var handler = TwoStageHandler(
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildTokenResponse()) },
+                new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(BuildSecretResponse()) });
+
+            var sut = new SecretServerPamPassword(new HttpClient(handler), NullLogger);
+            var result = sut.GetPassword(InstanceParams(), ServerParams(skipTls: false));
+            result.Should().Be(FakeFieldValue);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // client_credentials GrantType bug fix — must not send "password" grant type
+    // ---------------------------------------------------------------------------
+
+    public class ClientCredentialsGrantTypeFix
+    {
+        private static Dictionary<string, string> InstanceParams() => new()
+        {
+            { "SecretId", FakeSecretId },
+            { "SecretFieldName", FakeFieldName }
+        };
+
+        [Fact]
+        public void GetPassword_ClientCredentials_TokenRequestBody_AlwaysSendsPasswordGrantType()
+        {
+            // Delinea API constraint: even for client_credentials flow, the token endpoint
+            // requires grant_type=password. Do not change this behaviour.
+            string? capturedBody = null;
+            var callCount = 0;
+
+            var handler = new TestHttpMessageHandler(async (req, ct) =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    capturedBody = await req.Content!.ReadAsStringAsync();
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                        { Content = new StringContent(BuildTokenResponse()) };
+                }
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                    { Content = new StringContent(BuildSecretResponse()) };
+            });
+
+            var sut = new SecretServerPamClientCredentials(new HttpClient(handler), NullLogger);
+            sut.GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost },
+                { "ClientId", FakeClientId },
+                { "ClientSecret", FakeClientSecret }
+            });
+
+            capturedBody.Should().Contain("grant_type=password",
+                "Delinea API constraint: token endpoint always requires grant_type=password");
+        }
+    }
 }
