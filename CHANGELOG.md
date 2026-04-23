@@ -1,3 +1,23 @@
+# v1.4.0
+
+## Features
+
+- Added three grant-type-specific PAM type variants. Each type exposes only the fields relevant to its authentication flow, resolving the Keyfactor Command UI requirement that all declared fields be populated.
+  - `Delinea-SecretServer-Password` — Username + Password authentication. Server parameters: `Host`, `Username`, `Password`, `SkipTlsValidation`.
+  - `Delinea-SecretServer-ClientCredentials` — OAuth2 client credentials flow. Server parameters: `Host`, `ClientId`, `ClientSecret`, `SkipTlsValidation`.
+  - `Delinea-SecretServer-Windows` — Integrated Windows Authentication (IWA). Server parameters: `Host`, `SkipTlsValidation`. NOTE: IWA is not supported on Secret Server Cloud.
+- All shared logic (HTTP, validation, secret retrieval, audit logging) is implemented once in the new `SecretServerPamBase` abstract class.
+- The existing `Delinea-SecretServer` type is unchanged and fully backwards compatible.
+
+## Bug Fixes
+
+- Fixed `client_credentials` case in `BuildDelineaConfiguration` where `GrantType` was incorrectly set to `"password"` instead of `"client_credentials"` on the resulting `DelineaConfiguration` object.
+- Validation of `SecretFieldName` now rejects whitespace-only values (previously only empty string was rejected).
+
+## Testing
+
+- Replaced the manual `TestConsole` project with a proper `xUnit` test project (`delinea-secretserver-pam.Tests`, targeting `net8.0`) covering all four PAM types, all auth flows, and error paths including missing parameters, token failures, field-not-found, and non-success HTTP responses.
+
 # v1.3.0
 
 ## Compliance Remediation (SOX/SOC2)
