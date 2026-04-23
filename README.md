@@ -32,99 +32,15 @@
 ## Overview
 
 The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret
-Server secret. Supports `password`, `client_credentials`, and `windows` (Integrated Windows Authentication)
-authentication methods. For more information on these authentication methods, see the
+Server secret. Supports either `password` or `client_credential` authentication methods. For more information on
+these authentication methods, see the
 [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
-
-## PAM Types
-
-This provider ships four PAM types. For new installations, use the type-specific variants — they only expose the
-fields relevant to the chosen authentication flow, which simplifies configuration in the Keyfactor Command UI.
-
-| PAM Type | Auth Method | Required Server Parameters |
-| --- | --- | --- |
-| `Delinea-SecretServer-Password` | Username + Password | `Host`, `Username`, `Password` |
-| `Delinea-SecretServer-ClientCredentials` | OAuth2 Client Credentials | `Host`, `ClientId`, `ClientSecret` |
-| `Delinea-SecretServer-Windows` | Integrated Windows Authentication | `Host` |
-| `Delinea-SecretServer` | Any (selected via `GrantType`) | `Host`, plus credentials for the chosen grant type |
-
-> [!NOTE]
-> `Delinea-SecretServer` is the original backwards-compatible type. It requires a `GrantType` field and exposes
-> all credential fields in the Command UI regardless of which grant type is active. Existing installations using
-> this type do not need to change.
 
 ## Authentication Methods
 For full details on each authentication method, please refer to the [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
 Below are example `manifest.json` snippets for each supported authentication method.
 
-### Password (type-specific variant — recommended for new installations)
-
-```json
-{
-  "extensions": {
-    "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "PAMProviders.Delinea.PAMProvider": {
-        "assemblyPath": "delinea-secretserver-pam.dll",
-        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
-      }
-    }
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-Password:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "Username": "<USERNAME>",
-    "Password": "<PASSWORD>"
-  }
-}
-```
-
-### OAuth2 Client Credentials (type-specific variant — recommended for new installations)
-
-```json
-{
-  "extensions": {
-    "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "PAMProviders.Delinea.PAMProvider": {
-        "assemblyPath": "delinea-secretserver-pam.dll",
-        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
-      }
-    }
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "ClientId": "<OAUTH_CLIENT_ID>",
-    "ClientSecret": "<OAUTH_CLIENT_SECRET>"
-  }
-}
-```
-
-### Windows (type-specific variant — recommended for new installations)
-
-> [!IMPORTANT]
-> Integrated Windows Authentication (IWA) does not work on Secret Server Cloud.
-
-```json
-{
-  "extensions": {
-    "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "PAMProviders.Delinea.PAMProvider": {
-        "assemblyPath": "delinea-secretserver-pam.dll",
-        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
-      }
-    }
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-    "Host": "https://example.secretserver.internal/SecretServer"
-  }
-}
-```
-
-Please refer to the [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm)
-for more information on configuring IWA.
-
-### Backwards-compatible type (existing installations — no change required)
-
-The original `Delinea-SecretServer` type continues to work unchanged. Use the `GrantType` parameter to select
-the authentication flow at runtime.
+### Password
 
 ```json
 {
@@ -144,6 +60,51 @@ the authentication flow at runtime.
   }
 }
 ```
+
+### oAuth2
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "PAMProviders.Delinea.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "ClientId": "<CLIENT_ID>",
+    "ClientSecret": "<CLIENT_SECRET>",
+    "GrantType": "client_credentials"
+  }
+}
+```
+
+### Windows
+
+> [!IMPORTANT]
+> Integrated Windows Authentication (IWA) does not work on Secret Server Cloud.
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "PAMProviders.Delinea.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "GrantType": "windows"
+  }
+}
+```
+Please refer to the [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm)
+for more information on configuring IWA.
 
 ## Support
 The Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
@@ -167,10 +128,18 @@ Before proceeding with installation, you should consider which pattern is best f
 
 To install Delinea Secret Server PAM Provider, it is recommended you install [kfutil](https://github.com/Keyfactor/kfutil). `kfutil` is a command-line tool that simplifies the process of creating PAM Types in Keyfactor Command.
 
+The Delinea Secret Server PAM Provider implements 4 PAM Types. Depending on your use case, you may elect to install one, or all of these PAM Types. An overview for each type is linked below:
+* [Delinea-SecretServer](docs/delinea-secretserver.md)
+* [Delinea-SecretServer-Password](docs/delinea-secretserver-password.md)
+* [Delinea-SecretServer-ClientCredentials](docs/delinea-secretserver-clientcredentials.md)
+* [Delinea-SecretServer-Windows](docs/delinea-secretserver-windows.md)
 
 
 
 
+
+
+<details><summary>Delinea-SecretServer</summary>
 
 
 #### Requirements
@@ -184,13 +153,8 @@ To install Delinea Secret Server PAM Provider, it is recommended you install [kf
 Create the required PAM Types in the connected Command platform.
 
 ```shell
-# Backwards-compatible type (supports all grant types via GrantType parameter)
+# Delinea-SecretServer
 kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer
-
-# Type-specific variants (recommended for new installations)
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Password
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-ClientCredentials
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Windows
 ```
 
 ##### Using the API
@@ -239,7 +203,7 @@ Below is the payload to `POST` to the Keyfactor Command API
         {
             "Name": "GrantType",
             "DisplayName": "Grant Type",
-            "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password` or `client_credentials`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatability.",
+            "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password`, `client_credentials`, or `windows`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatibility.",
             "DataType": 1,
             "InstanceLevel": false
         },
@@ -340,13 +304,8 @@ Below is the payload to `POST` to the Keyfactor Command API
     ```json
 
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
-            "Host": "https://example.secretservercloud.com/SecretServer",
-            "Username": "<USERNAME>",
-            "Password": "<PASSWORD>",
-            "ClientId": "<OAUTH_CLIENT_ID>",
-            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
-            "GrantType": "password|client_credentials|windows"
+        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
+            "Host": "https://example.secretserver.internal/SecretServer"
         }
     }
 
@@ -360,6 +319,270 @@ Below is the payload to `POST` to the Keyfactor Command API
 
 
 
+</details>
+
+
+
+
+
+
+
+<details><summary>Delinea-SecretServer-Password</summary>
+
+
+#### Requirements
+   TODO Requirements is a required section
+
+#### Create PAM type in Keyfactor Command
+
+
+##### Using `kfutil`
+Create the required PAM Types in the connected Command platform.
+
+```shell
+# Delinea-SecretServer-Password
+kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Password
+```
+
+##### Using the API
+For full API docs please visit our [product documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/WebAPI/KeyfactorAPI/PAMProvidersPOSTTypes.htm?Highlight=pam%20type)
+
+Below is the payload to `POST` to the Keyfactor Command API
+```json
+{
+    "Name": "Delinea-SecretServer-Password",
+    "Parameters": [
+        {
+            "Name": "Host",
+            "DisplayName": "Secret Server URL",
+            "Description": "The URL to the Secret Server instance. Example: https://example.secretservercloud.com/SecretServer",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "Username",
+            "DisplayName": "Secret Server Username",
+            "Description": "The username used to authenticate to the Secret Server instance.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "Password",
+            "DisplayName": "Secret Server Password",
+            "Description": "The password used to authenticate to the Secret Server instance.",
+            "DataType": 2,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SkipTlsValidation",
+            "DisplayName": "Skip TLS Validation",
+            "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SecretId",
+            "DisplayName": "Secret ID",
+            "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
+            "DataType": 1,
+            "InstanceLevel": true
+        },
+        {
+            "Name": "SecretFieldName",
+            "DisplayName": "Secret Field Name",
+            "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+            "DataType": 1,
+            "InstanceLevel": true
+        }
+    ]
+}
+```
+
+#### Install PAM provider on Keyfactor Command Host (Local)
+
+
+("TODO Platform Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### Install PAM provider on a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
+
+
+
+
+
+
+<details><summary>Delinea-SecretServer-ClientCredentials</summary>
+
+
+#### Requirements
+   TODO Requirements is a required section
+
+#### Create PAM type in Keyfactor Command
+
+
+##### Using `kfutil`
+Create the required PAM Types in the connected Command platform.
+
+```shell
+# Delinea-SecretServer-ClientCredentials
+kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-ClientCredentials
+```
+
+##### Using the API
+For full API docs please visit our [product documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/WebAPI/KeyfactorAPI/PAMProvidersPOSTTypes.htm?Highlight=pam%20type)
+
+Below is the payload to `POST` to the Keyfactor Command API
+```json
+{
+    "Name": "Delinea-SecretServer-ClientCredentials",
+    "Parameters": [
+        {
+            "Name": "Host",
+            "DisplayName": "Secret Server URL",
+            "Description": "The URL to the Secret Server instance. Example: https://example.secretservercloud.com/SecretServer",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "ClientId",
+            "DisplayName": "OAuth2 Client ID",
+            "Description": "The client ID (application account name) used for OAuth2 client credentials authentication.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "ClientSecret",
+            "DisplayName": "OAuth2 Client Secret",
+            "Description": "The client secret (application account password) used for OAuth2 client credentials authentication.",
+            "DataType": 2,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SkipTlsValidation",
+            "DisplayName": "Skip TLS Validation",
+            "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SecretId",
+            "DisplayName": "Secret ID",
+            "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
+            "DataType": 1,
+            "InstanceLevel": true
+        },
+        {
+            "Name": "SecretFieldName",
+            "DisplayName": "Secret Field Name",
+            "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+            "DataType": 1,
+            "InstanceLevel": true
+        }
+    ]
+}
+```
+
+#### Install PAM provider on Keyfactor Command Host (Local)
+
+
+("TODO Platform Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### Install PAM provider on a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
+
+
+
+
+
+
+<details><summary>Delinea-SecretServer-Windows</summary>
+
+
+#### Requirements
+   TODO Requirements is a required section
+
+#### Create PAM type in Keyfactor Command
+
+
+##### Using `kfutil`
+Create the required PAM Types in the connected Command platform.
+
+```shell
+# Delinea-SecretServer-Windows
+kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Windows
+```
+
+##### Using the API
+For full API docs please visit our [product documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/WebAPI/KeyfactorAPI/PAMProvidersPOSTTypes.htm?Highlight=pam%20type)
+
+Below is the payload to `POST` to the Keyfactor Command API
+```json
+{
+    "Name": "Delinea-SecretServer-Windows",
+    "Parameters": [
+        {
+            "Name": "Host",
+            "DisplayName": "Secret Server URL",
+            "Description": "The URL to the Secret Server instance. Example: https://example.secretserver.internal/SecretServer. NOTE: IWA is not supported on Secret Server Cloud.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SkipTlsValidation",
+            "DisplayName": "Skip TLS Validation",
+            "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SecretId",
+            "DisplayName": "Secret ID",
+            "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
+            "DataType": 1,
+            "InstanceLevel": true
+        },
+        {
+            "Name": "SecretFieldName",
+            "DisplayName": "Secret Field Name",
+            "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+            "DataType": 1,
+            "InstanceLevel": true
+        }
+    ]
+}
+```
+
+#### Install PAM provider on Keyfactor Command Host (Local)
+
+
+("TODO Platform Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### Install PAM provider on a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Install is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
 
 
 
@@ -369,6 +592,8 @@ Below is the payload to `POST` to the Keyfactor Command API
 
 
 
+
+<details><summary>Delinea-SecretServer</summary>
 
 
 #### From Keyfactor Command Host (Local)
@@ -392,7 +617,7 @@ Below is the payload to `POST` to the Keyfactor Command API
 | Password | Secret Server Password | The password used to authenticate to the Secret Server instance. NOTE: only applicable if using the `password` grant type. |
 | ClientId | Secret Server Client ID | The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
 | ClientSecret | Secret Server Client Secret | The client secret used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
-| GrantType | Grant Type | The grant type used to authenticate to the Secret Server instance. Valid values are `password` or `client_credentials`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatability. |
+| GrantType | Grant Type | The grant type used to authenticate to the Secret Server instance. Valid values are `password`, `client_credentials`, or `windows`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatibility. |
 
 
 4. Click **Save**. The PAM provider is now available for use in Keyfactor Command.
@@ -467,9 +692,89 @@ When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and
 
 
 
+</details>
+
 
 > [!NOTE]
 > Additional information on Delinea-SecretServer can be found in the [supplemental documentation](docs/delinea-secretserver.md).
+
+
+
+
+
+<details><summary>Delinea-SecretServer-Password</summary>
+
+
+#### From Keyfactor Command Host (Local)
+
+
+("TODO Platform Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### From a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
+
+> [!NOTE]
+> Additional information on Delinea-SecretServer-Password can be found in the [supplemental documentation](docs/delinea-secretserver-password.md).
+
+
+
+
+
+<details><summary>Delinea-SecretServer-ClientCredentials</summary>
+
+
+#### From Keyfactor Command Host (Local)
+
+
+("TODO Platform Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### From a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
+
+> [!NOTE]
+> Additional information on Delinea-SecretServer-ClientCredentials can be found in the [supplemental documentation](docs/delinea-secretserver-clientcredentials.md).
+
+
+
+
+
+<details><summary>Delinea-SecretServer-Windows</summary>
+
+
+#### From Keyfactor Command Host (Local)
+
+
+("TODO Platform Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+#### From a Universal Orchestrator Host (Remote)
+
+
+("TODO Orchestrator Usage is an optional section. If this section doesn't seem necessary on initial glance, please delete it. Refer to the docs on [Confluence](https://keyfactor.atlassian.net/wiki/x/SAAyHg) for more info",)
+
+
+
+</details>
+
+
+> [!NOTE]
+> Additional information on Delinea-SecretServer-Windows can be found in the [supplemental documentation](docs/delinea-secretserver-windows.md).
 
 
 
