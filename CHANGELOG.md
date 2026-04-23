@@ -9,6 +9,7 @@
 - All shared logic (HTTP, validation, secret retrieval, audit logging) is implemented once in the new `SecretServerPamBase` abstract class.
 - The existing `Delinea-SecretServer` type is unchanged and fully backwards compatible.
 - TLS certificate validation can now be disabled via the `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (`true` or `1`), in addition to the existing `SkipTlsValidation` configuration parameter. Either setting is sufficient to disable validation.
+- Parameter values of `N/A` (case-insensitive, whitespace-trimmed) are now treated as empty/absent. This allows users of the backwards-compatible `Delinea-SecretServer` type to enter `N/A` as a dummy value in the Keyfactor Command UI for fields that are not applicable to their authentication flow.
 
 ## Compliance Remediation (SOX/SOC2)
 

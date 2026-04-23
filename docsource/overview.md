@@ -21,6 +21,17 @@ fields relevant to the chosen authentication flow, which simplifies configuratio
 > a `GrantType` field and exposes all credential fields in the Keyfactor Command UI regardless of which grant type
 > is active. Existing installations do not need to change.
 
+## Dummy Values
+
+When using the backwards-compatible `Delinea-SecretServer` type, the Keyfactor Command UI requires all declared
+fields to be populated. For fields that are not applicable to the chosen authentication flow, enter `N/A` as the
+value. The provider treats `N/A` (case-insensitive) as equivalent to an empty value and will not attempt to use it.
+
+> [!TIP]
+> For new installations, use the type-specific PAM types (`Delinea-SecretServer-Password`,
+> `Delinea-SecretServer-ClientCredentials`, `Delinea-SecretServer-Windows`) to avoid this entirely — they only
+> expose the fields relevant to the chosen authentication flow.
+
 ## TLS Validation
 
 All PAM types support skipping TLS certificate validation for non-production environments via either:
