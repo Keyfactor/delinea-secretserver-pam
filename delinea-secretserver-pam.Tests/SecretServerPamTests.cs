@@ -924,4 +924,45 @@ public class SecretServerPamTests
                 "Delinea API constraint: token endpoint always requires grant_type=password");
         }
     }
+
+    // ---------------------------------------------------------------------------
+    // Integration tests — skipped automatically when env vars are not set
+    // ---------------------------------------------------------------------------
+
+    public class IntegrationTests
+    {
+        private static string Env(string name) => Environment.GetEnvironmentVariable(name)!;
+        private static bool SkipTls =>
+            string.Equals(Env("SECRET_SERVER_SKIP_TLS_VALIDATION"), "true", StringComparison.OrdinalIgnoreCase);
+
+        [IntegrationFact]
+        public void LiveServer_PasswordGrant_RetrievesSecret()
+        {
+            var sut = new SecretServerPamPassword();
+            var result = sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", Env("SECRET_SERVER_SECRET_ID") }, { "SecretFieldName", "username" } },
+                new Dictionary<string, string> { { "Host", Env("SECRET_SERVER_URL") }, { "Username", Env("SECRET_SERVER_USERNAME") }, { "Password", Env("SECRET_SERVER_PASSWORD") }, { "SkipTlsValidation", SkipTls ? "true" : "false" } });
+
+            result.Should().NotBeNullOrEmpty("live Secret Server should return a non-empty value");
+        }
+
+        [IntegrationFact]
+        public void LiveServer_EnvVarSkipTls_RetrievesSecret()
+        {
+            Environment.SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", "true");
+            try
+            {
+                var sut = new SecretServerPamPassword();
+                var result = sut.GetPassword(
+                    new Dictionary<string, string> { { "SecretId", Env("SECRET_SERVER_SECRET_ID") }, { "SecretFieldName", "username" } },
+                    new Dictionary<string, string> { { "Host", Env("SECRET_SERVER_URL") }, { "Username", Env("SECRET_SERVER_USERNAME") }, { "Password", Env("SECRET_SERVER_PASSWORD") } });
+
+                result.Should().NotBeNullOrEmpty("KEYFACTOR_PAM_SKIP_TLS_VALIDATION=true should allow retrieval from live server");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", null);
+            }
+        }
+    }
 }
