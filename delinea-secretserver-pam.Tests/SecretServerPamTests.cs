@@ -880,6 +880,77 @@ public class SecretServerPamTests
     }
 
     // ---------------------------------------------------------------------------
+    // N/A dummy value — treated as absent/empty input
+    // ---------------------------------------------------------------------------
+
+    public class NaDummyValue
+    {
+        private static TestHttpMessageHandler HappyPathHandler() => new TestHttpMessageHandler((req, ct) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    req.RequestUri!.AbsolutePath.Contains("oauth2/token")
+                        ? BuildTokenResponse()
+                        : BuildSecretResponse())
+            }));
+
+        [Fact]
+        public void GetPassword_NaPassword_TreatedAsEmpty_ThrowsInvalidClientConfiguration()
+        {
+            var sut = new SecretServerPamPassword(new HttpClient(HappyPathHandler()), NullLogger);
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId }, { "SecretFieldName", FakeFieldName } },
+                new Dictionary<string, string> { { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", "N/A" } });
+
+            act.Should().Throw<InvalidClientConfigurationException>("N/A password must be treated as absent");
+        }
+
+        [Fact]
+        public void GetPassword_NaUsernameWithCasing_TreatedAsEmpty_ThrowsInvalidClientConfiguration()
+        {
+            var sut = new SecretServerPamPassword(new HttpClient(HappyPathHandler()), NullLogger);
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId }, { "SecretFieldName", FakeFieldName } },
+                new Dictionary<string, string> { { "Host", FakeHost }, { "Username", "n/a" }, { "Password", FakePassword } });
+
+            act.Should().Throw<InvalidClientConfigurationException>("n/a (lowercase) must be treated as absent");
+        }
+
+        [Fact]
+        public void GetPassword_NaSecretFieldName_TreatedAsEmpty_ThrowsInvalidSecretConfiguration()
+        {
+            var sut = new SecretServerPamPassword(new HttpClient(HappyPathHandler()), NullLogger);
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId }, { "SecretFieldName", "N/A" } },
+                new Dictionary<string, string> { { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", FakePassword } });
+
+            act.Should().Throw<InvalidSecretConfigurationException>("N/A SecretFieldName must be treated as absent");
+        }
+
+        [Fact]
+        public void GetPassword_NaWithSurroundingWhitespace_TreatedAsEmpty()
+        {
+            var sut = new SecretServerPamPassword(new HttpClient(HappyPathHandler()), NullLogger);
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId }, { "SecretFieldName", FakeFieldName } },
+                new Dictionary<string, string> { { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", " N/A " } });
+
+            act.Should().Throw<InvalidClientConfigurationException>("' N/A ' (with whitespace) must be treated as absent");
+        }
+
+        [Fact]
+        public void GetPassword_RealValueNotNa_PassesThrough()
+        {
+            var sut = new SecretServerPamPassword(new HttpClient(HappyPathHandler()), NullLogger);
+            var result = sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId }, { "SecretFieldName", FakeFieldName } },
+                new Dictionary<string, string> { { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", FakePassword } });
+
+            result.Should().Be(FakeFieldValue, "real values must not be affected by N/A normalization");
+        }
+    }
+
+    // ---------------------------------------------------------------------------
     // client_credentials GrantType bug fix — must not send "password" grant type
     // ---------------------------------------------------------------------------
 

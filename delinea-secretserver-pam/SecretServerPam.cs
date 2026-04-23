@@ -550,12 +550,20 @@ namespace Keyfactor.Extensions.Pam.Delinea
         // Configuration builder
         // ---------------------------------------------------------------------------
 
+        private static IReadOnlyDictionary<string, string> NormalizeConfig(IReadOnlyDictionary<string, string> config)
+            => config.ToDictionary(
+                kvp => kvp.Key,
+                kvp => string.Equals(kvp.Value?.Trim(), "N/A", StringComparison.OrdinalIgnoreCase) ? "" : kvp.Value ?? "");
+
         private DelineaConfiguration BuildDelineaConfiguration(
             IReadOnlyDictionary<string, string> instanceParameters,
             IReadOnlyDictionary<string, string> connectionConfiguration)
         {
             Logger.MethodEntry();
             Logger.LogInformation("Validating Delinea configuration");
+
+            instanceParameters = NormalizeConfig(instanceParameters);
+            connectionConfiguration = NormalizeConfig(connectionConfiguration);
 
             var grantType = ResolveGrantType(connectionConfiguration);
 
