@@ -1,4 +1,4 @@
-# v1.4.0
+# v1.3.0
 
 ## Features
 
@@ -8,17 +8,7 @@
   - `Delinea-SecretServer-Windows` — Integrated Windows Authentication (IWA). Server parameters: `Host`, `SkipTlsValidation`. NOTE: IWA is not supported on Secret Server Cloud.
 - All shared logic (HTTP, validation, secret retrieval, audit logging) is implemented once in the new `SecretServerPamBase` abstract class.
 - The existing `Delinea-SecretServer` type is unchanged and fully backwards compatible.
-
-## Bug Fixes
-
-- Fixed `client_credentials` case in `BuildDelineaConfiguration` where `GrantType` was incorrectly set to `"password"` instead of `"client_credentials"` on the resulting `DelineaConfiguration` object.
-- Validation of `SecretFieldName` now rejects whitespace-only values (previously only empty string was rejected).
-
-## Testing
-
-- Replaced the manual `TestConsole` project with a proper `xUnit` test project (`delinea-secretserver-pam.Tests`, targeting `net8.0`) covering all four PAM types, all auth flows, and error paths including missing parameters, token failures, field-not-found, and non-success HTTP responses.
-
-# v1.3.0
+- TLS certificate validation can now be disabled via the `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (`true` or `1`), in addition to the existing `SkipTlsValidation` configuration parameter. Either setting is sufficient to disable validation.
 
 ## Compliance Remediation (SOX/SOC2)
 
@@ -33,6 +23,7 @@
 - Added inline comments at each `Environment.UserName` usage site documenting that this value reflects the OS service account identity, not the Keyfactor Command caller identity, since `IPAMProvider` does not expose caller context.
 
 ## Improvements
+
 - Enhanced debug logging for token endpoint requests: the obfuscated request body (credentials redacted) and raw response body are now logged on token request failures to aid troubleshooting.
 - Added structured audit log event on every `GetPassword` invocation recording caller identity, machine name, target URL, grant type, SecretId, and field name.
 - Added response duration logging (ms) for both the OAuth token endpoint and secret retrieval API calls.
@@ -42,9 +33,18 @@
 - Removed raw token response body from deserialization failure log path to prevent accidental bearer token exposure.
 
 ## Bug Fixes
+
+- Fixed `client_credentials` case in `BuildDelineaConfiguration` where `GrantType` was incorrectly set to `"password"` instead of `"client_credentials"` on the resulting `DelineaConfiguration` object.
+- Validation of `SecretFieldName` now rejects whitespace-only values (previously only empty string was rejected).
 - Replaced `.Result` with `.GetAwaiter().GetResult()` in `GetPassword` to prevent exception masking on async task failures.
 
+## Testing
+
+- Replaced the manual `TestConsole` project with a proper `xUnit` test project (`delinea-secretserver-pam.Tests`, targeting `net8.0`) covering all four PAM types, all auth flows, and error paths including missing parameters, token failures, field-not-found, and non-success HTTP responses.
+- Integration tests skip automatically when `SECRET_SERVER_*` environment variables are not set.
+
 ## Maintenance
+
 - Removed dead `IValidatableObject` implementation from `DelineaConfiguration`; validation is enforced in `ValidateServerConfigurationParams`.
 - Masked password value in TestConsole output.
 - Bumped TestConsole target framework to net10.0 and global SDK pin to 10.0.0.
