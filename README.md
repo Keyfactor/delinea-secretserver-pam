@@ -52,6 +52,18 @@ fields relevant to the chosen authentication flow, which simplifies configuratio
 > a `GrantType` field and exposes all credential fields in the Keyfactor Command UI regardless of which grant type
 > is active. Existing installations do not need to change.
 
+## TLS Validation
+
+All PAM types support skipping TLS certificate validation for non-production environments via either:
+
+- The `SkipTlsValidation` configuration parameter (set to `true` in the PAM provider instance)
+- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host)
+
+The environment variable takes precedence and overrides the configuration parameter.
+
+> [!WARNING]
+> Disabling TLS validation should only be used in non-production environments.
+
 ## Support
 The Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
 

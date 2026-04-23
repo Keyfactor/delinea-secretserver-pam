@@ -20,3 +20,15 @@ fields relevant to the chosen authentication flow, which simplifies configuratio
 > `Delinea-SecretServer` is the original backwards-compatible type retained for existing installations. It requires
 > a `GrantType` field and exposes all credential fields in the Keyfactor Command UI regardless of which grant type
 > is active. Existing installations do not need to change.
+
+## TLS Validation
+
+All PAM types support skipping TLS certificate validation for non-production environments via either:
+
+- The `SkipTlsValidation` configuration parameter (set to `true` in the PAM provider instance)
+- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host)
+
+The environment variable takes precedence and overrides the configuration parameter.
+
+> [!WARNING]
+> Disabling TLS validation should only be used in non-production environments.

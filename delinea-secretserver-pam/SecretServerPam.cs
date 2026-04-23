@@ -574,7 +574,10 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogDebug("Secret ID: {SecretId}", secretId);
 
             connectionConfiguration.TryGetValue(DelineaConfiguration.SKIP_TLS_VALIDATION, out var skipTlsRaw);
-            var skipTls = string.Equals(skipTlsRaw, "true", StringComparison.OrdinalIgnoreCase);
+            var skipTlsEnv = Environment.GetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION");
+            var skipTls = string.Equals(skipTlsRaw, "true", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(skipTlsEnv, "true", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(skipTlsEnv, "1", StringComparison.OrdinalIgnoreCase);
             if (skipTls)
                 Logger.LogWarning(
                     "TLS certificate validation is disabled — use only in non-production environments");
