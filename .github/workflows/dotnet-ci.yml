@@ -1,0 +1,59 @@
+name: Build and Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release-*
+
+jobs:
+  unit-test:
+    name: Build and Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Add Keyfactor NuGet feed
+        run: dotnet nuget add source https://nuget.pkg.github.com/Keyfactor/index.json -n github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
+      - name: Build
+        run: dotnet build delinea-secretserver-pam.sln -c Release
+
+      - name: Unit Test
+        # No SECRET_SERVER_* env vars set — IntegrationFactAttribute auto-skips integration tests
+        run: dotnet test delinea-secretserver-pam.Tests/delinea-secretserver-pam.Tests.csproj --no-build -c Release --logger "console;verbosity=normal"
+
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: unit-test
+    # Skipped entirely when the environment hasn't been provisioned via Terraform
+    if: vars.INTEGRATION_TESTS_ENABLED == 'true'
+    environment: integration-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Add Keyfactor NuGet feed
+        run: dotnet nuget add source https://nuget.pkg.github.com/Keyfactor/index.json -n github -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text
+
+      - name: Build
+        run: dotnet build delinea-secretserver-pam.sln -c Release
+
+      - name: Integration Test
+        run: dotnet test delinea-secretserver-pam.Tests/delinea-secretserver-pam.Tests.csproj --no-build -c Release --logger "console;verbosity=normal"
+        env:
+          SECRET_SERVER_URL: ${{ secrets.SECRET_SERVER_URL }}
+          SECRET_SERVER_USERNAME: ${{ secrets.SECRET_SERVER_USERNAME }}
+          SECRET_SERVER_PASSWORD: ${{ secrets.SECRET_SERVER_PASSWORD }}
+          SECRET_SERVER_SECRET_ID: ${{ secrets.SECRET_SERVER_SECRET_ID }}
+          SECRET_SERVER_SKIP_TLS_VALIDATION: ${{ vars.SECRET_SERVER_SKIP_TLS_VALIDATION }}
+          KEYFACTOR_PAM_SKIP_TLS_VALIDATION: ${{ vars.SECRET_SERVER_SKIP_TLS_VALIDATION }}
