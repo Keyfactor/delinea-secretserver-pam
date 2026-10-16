@@ -1,11 +1,19 @@
 {
   "extensions": {
     "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "PAMProviders.Delinea.PAMProvider": {
+      "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
         "assemblyPath": "delinea-secretserver-pam.dll",
         "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
       }
     }
+  },
+  "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "Username": "<USERNAME>",
+    "Password": "<PASSWORD>",
+    "ClientId": "<OAUTH_CLIENT_ID>",
+    "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+    "GrantType": "password|client_credentials|windows"
   },
   "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
     "Host": "https://example.secretservercloud.com/SecretServer",
@@ -14,18 +22,5 @@
     "ClientId": "<OAUTH_CLIENT_ID>",
     "ClientSecret": "<OAUTH_CLIENT_SECRET>",
     "GrantType": "password|client_credentials|windows"
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-Password:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "Username": "<USERNAME>",
-    "Password": "<PASSWORD>"
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "ClientId": "<OAUTH_CLIENT_ID>",
-    "ClientSecret": "<OAUTH_CLIENT_SECRET>"
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-    "Host": "https://example.secretserver.internal/SecretServer"
   }
 }
