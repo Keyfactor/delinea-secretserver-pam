@@ -40,7 +40,7 @@ to the chosen authentication method.
     {
       "extensions": {
         "Keyfactor.Platform.Extensions.IPAMProvider": {
-          "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
+          "<COMMAND-PAM-PROVIDER-NAME>": {
             "assemblyPath": "delinea-secretserver-pam.dll",
             "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
           }
@@ -67,13 +67,13 @@ to the chosen authentication method.
 
 3. Edit `manifest.json`:
 
-    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer`. The `extensions` entry key must read `PAMProviders.<provider name>.PAMProvider`, and the section must read `Keyfactor:PAMProviders:<provider name>:InitializationInfo`.
+    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer`. The `extensions` entry key is the provider name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix, and the configuration section name uses the same provider name: `Keyfactor:PAMProviders:<provider name>:InitializationInfo`. For example, for a provider named `Delinea`, the `extensions` entry key is `"Delinea": { ... }` and the section is `"Keyfactor:PAMProviders:Delinea:InitializationInfo": { ... }`.
     * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
     * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver.md#requirements) section.
     * Remove any `Keyfactor:PAMProviders:*:InitializationInfo` sample sections you do not use. In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
 
     > [!NOTE]
-    > Observed on a Universal Orchestrator: a certificate store field resolved through a PAM provider failed with `No PAM provider registered with name <provider name>` when the extension entry was keyed by the PAM type name instead of the PAM provider name. The orchestrator resolves the provider by the name of the provider you created in Command, so use that name for the extension entry and its `InitializationInfo` section.
+    > Observed on a Universal Orchestrator (K8SJKS store, store password bound to the provider, named PAM resolver): an extension entry keyed `PAMProviders.<provider name>.PAMProvider` failed with `No extension configuration found for 'Keyfactor.Platform.Extensions.IPAMProvider' with name '<provider name>'` followed by `No PAM provider registered with name <provider name>`. Keying the extension entry by the bare provider name (for example `Delinea`), together with the `Keyfactor:PAMProviders:<provider name>:InitializationInfo` section, cleared the error and the plugin ran with the supplied configuration. Other key shapes were not tested.
 
     The same values can alternatively be supplied as environment variables of the form `Keyfactor__PAMProviders__<provider name>__InitializationInfo__<Key>` on the orchestrator host.
 
