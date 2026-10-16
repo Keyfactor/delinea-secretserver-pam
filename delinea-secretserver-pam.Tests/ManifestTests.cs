@@ -17,7 +17,7 @@ namespace Keyfactor.Extensions.Pam.Delinea.Tests;
 /// </summary>
 public class ManifestTests
 {
-    private const string ProviderPlaceholder = "<COMMAND-PAM-PROVIDER-NAME>";
+    private const string ProviderPlaceholder = "YOUR-PROVIDER-NAME";
     private const string ExtensionsKey = "extensions";
     private const string IPamProviderKey = "Keyfactor.Platform.Extensions.IPAMProvider";
 
@@ -45,12 +45,13 @@ public class ManifestTests
 
     [Theory]
     [MemberData(nameof(Manifests))]
-    public void Manifest_HasSingleExtensionEntry_KeyedByBareProviderPlaceholder(string fileName, Type expectedType)
+    public void Manifest_HasSingleExtensionEntry_KeyedByBracketFreeProviderPlaceholder(string fileName, Type expectedType)
     {
         var entries = ((JObject)Load(fileName)[ExtensionsKey]![IPamProviderKey]!).Properties().ToList();
 
         entries.Should().HaveCount(1);
         entries[0].Name.Should().Be(ProviderPlaceholder);
+        entries[0].Name.Should().NotContain("<").And.NotContain(">");
         entries[0].Name.Should().NotStartWith("PAMProviders.");
         entries[0].Name.Should().NotEndWith(".PAMProvider");
         entries[0].Value["assemblyPath"]!.Value<string>().Should().Be("delinea-secretserver-pam.dll");

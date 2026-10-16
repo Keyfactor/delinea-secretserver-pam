@@ -1,13 +1,13 @@
 {
   "extensions": {
     "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "<COMMAND-PAM-PROVIDER-NAME>": {
+      "YOUR-PROVIDER-NAME": {
         "assemblyPath": "delinea-secretserver-pam.dll",
         "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows"
       }
     }
   },
-  "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+  "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
     "Host": "https://example.secretserver.internal/SecretServer"
   },
   "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
