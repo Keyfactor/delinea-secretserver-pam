@@ -2,7 +2,7 @@
 
 ## Breaking Changes
 
-- `(manifest)` The shipped manifest files no longer register the provider under a type-based key. The extension entry in each manifest is now keyed by the provider name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix: the shipped key is the placeholder `<COMMAND-PAM-PROVIDER-NAME>`, which must be edited to the name of the PAM provider created in Keyfactor Command before the file is used (for a provider named `Delinea`, the key is `Delinea` and the config section is `Keyfactor:PAMProviders:Delinea:InitializationInfo`). An unedited manifest does not register a usable provider. Upgrading over an edited `manifest.json` overwrites it as before.
+- `(manifest)` The shipped manifest files no longer register the provider under a type-based key. The extension entry in each manifest is now keyed by the provider name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix: the shipped key is the placeholder `YOUR-PROVIDER-NAME` (bracket-free, because a bracketed placeholder key made an orchestrator fail to start in the tested environment; observed once, cause not established), which must be edited to the name of the PAM provider created in Keyfactor Command before the file is used (for a provider named `Delinea`, the key is `Delinea` and the config section is `Keyfactor:PAMProviders:Delinea:InitializationInfo`). An unedited manifest does not register a usable provider. Upgrading over an edited `manifest.json` overwrites it as before.
 
 ## Features
 
