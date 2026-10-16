@@ -45,12 +45,14 @@ public class ManifestTests
 
     [Theory]
     [MemberData(nameof(Manifests))]
-    public void Manifest_HasSingleExtensionEntry_KeyedByProviderPlaceholder(string fileName, Type expectedType)
+    public void Manifest_HasSingleExtensionEntry_KeyedByBareProviderPlaceholder(string fileName, Type expectedType)
     {
         var entries = ((JObject)Load(fileName)[ExtensionsKey]![IPamProviderKey]!).Properties().ToList();
 
         entries.Should().HaveCount(1);
-        entries[0].Name.Should().Be($"PAMProviders.{ProviderPlaceholder}.PAMProvider");
+        entries[0].Name.Should().Be(ProviderPlaceholder);
+        entries[0].Name.Should().NotStartWith("PAMProviders.");
+        entries[0].Name.Should().NotEndWith(".PAMProvider");
         entries[0].Value["assemblyPath"]!.Value<string>().Should().Be("delinea-secretserver-pam.dll");
         entries[0].Value["TypeFullName"]!.Value<string>().Should().Be(expectedType.FullName);
     }
