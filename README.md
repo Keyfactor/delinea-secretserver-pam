@@ -271,20 +271,49 @@ Below is the payload to `POST` to the Keyfactor Command API
         * **Windows Server**: `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions\delinea-secretserver-pam`
         * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
 
-2. Included in the release is a `manifest.json` file that contains the following object:
+2. This provider's `Delinea-SecretServer` type uses the `manifest.json` file as shipped; no rename is needed. (The release also contains `Password-manifest.json`, `ClientCredentials-manifest.json` and `Windows-manifest.json` for the other PAM types.) The file contains the following:
     ```json
-
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+      "extensions": {
+        "Keyfactor.Platform.Extensions.IPAMProvider": {
+          "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
+            "assemblyPath": "delinea-secretserver-pam.dll",
+            "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+          }
         }
+      },
+      "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "Username": "<USERNAME>",
+        "Password": "<PASSWORD>",
+        "ClientId": "<OAUTH_CLIENT_ID>",
+        "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+        "GrantType": "password|client_credentials|windows"
+      },
+      "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "Username": "<USERNAME>",
+        "Password": "<PASSWORD>",
+        "ClientId": "<OAUTH_CLIENT_ID>",
+        "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+        "GrantType": "password|client_credentials|windows"
+      }
     }
-
     ```
 
-    Populate the fields in this object with credentials and configuration data collected in the [requirements](docs/delinea-secretserver.md#requirements) section.
+3. Edit `manifest.json`:
 
-3. Restart the Universal Orchestrator service.
+    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer`. The `extensions` entry key must read `PAMProviders.<provider name>.PAMProvider`, and the section must read `Keyfactor:PAMProviders:<provider name>:InitializationInfo`.
+    * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
+    * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver.md#requirements) section.
+    * Remove any `Keyfactor:PAMProviders:*:InitializationInfo` sample sections you do not use. In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
+
+    > [!NOTE]
+    > Observed on a Universal Orchestrator: a certificate store field resolved through a PAM provider failed with `No PAM provider registered with name <provider name>` when the extension entry was keyed by the PAM type name instead of the PAM provider name. The orchestrator resolves the provider by the name of the provider you created in Command, so use that name for the extension entry and its `InitializationInfo` section.
+
+    The same values can alternatively be supplied as environment variables of the form `Keyfactor__PAMProviders__<provider name>__InitializationInfo__<Key>` on the orchestrator host.
+
+4. Restart the Universal Orchestrator service after editing `manifest.json`.
 
 
 
@@ -447,20 +476,43 @@ Below is the payload to `POST` to the Keyfactor Command API
         * **Windows Server**: `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions\delinea-secretserver-pam`
         * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
 
-2. Included in the release is a `manifest.json` file that contains the following object:
+2. The release contains one manifest file per PAM type. To use `Delinea-SecretServer-Password`, replace the contents of `manifest.json` with the contents of `Password-manifest.json` (for example, delete `manifest.json` and rename `Password-manifest.json` to `manifest.json`). The file contains the following:
     ```json
-
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+      "extensions": {
+        "Keyfactor.Platform.Extensions.IPAMProvider": {
+          "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
+            "assemblyPath": "delinea-secretserver-pam.dll",
+            "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword"
+          }
         }
+      },
+      "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "Username": "<USERNAME>",
+        "Password": "<PASSWORD>"
+      },
+      "Keyfactor:PAMProviders:Delinea-SecretServer-Password:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "Username": "<USERNAME>",
+        "Password": "<PASSWORD>"
+      }
     }
-
     ```
 
-    Populate the fields in this object with credentials and configuration data collected in the [requirements](docs/delinea-secretserver-password.md#requirements) section.
+3. Edit `manifest.json`:
 
-3. Restart the Universal Orchestrator service.
+    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer-Password`. The `extensions` entry key must read `PAMProviders.<provider name>.PAMProvider`, and the section must read `Keyfactor:PAMProviders:<provider name>:InitializationInfo`.
+    * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer-Password:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
+    * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver-password.md#requirements) section.
+    * Remove any `Keyfactor:PAMProviders:*:InitializationInfo` sample sections you do not use. In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
+
+    > [!NOTE]
+    > Observed on a Universal Orchestrator: a certificate store field resolved through a PAM provider failed with `No PAM provider registered with name <provider name>` when the extension entry was keyed by the PAM type name instead of the PAM provider name. The orchestrator resolves the provider by the name of the provider you created in Command, so use that name for the extension entry and its `InitializationInfo` section.
+
+    The same values can alternatively be supplied as environment variables of the form `Keyfactor__PAMProviders__<provider name>__InitializationInfo__<Key>` on the orchestrator host.
+
+4. Restart the Universal Orchestrator service after editing `manifest.json`.
 
 
 
@@ -623,20 +675,43 @@ Below is the payload to `POST` to the Keyfactor Command API
         * **Windows Server**: `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions\delinea-secretserver-pam`
         * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
 
-2. Included in the release is a `manifest.json` file that contains the following object:
+2. The release contains one manifest file per PAM type. To use `Delinea-SecretServer-ClientCredentials`, replace the contents of `manifest.json` with the contents of `ClientCredentials-manifest.json` (for example, delete `manifest.json` and rename `ClientCredentials-manifest.json` to `manifest.json`). The file contains the following:
     ```json
-
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+      "extensions": {
+        "Keyfactor.Platform.Extensions.IPAMProvider": {
+          "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
+            "assemblyPath": "delinea-secretserver-pam.dll",
+            "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials"
+          }
         }
+      },
+      "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "ClientId": "<OAUTH_CLIENT_ID>",
+        "ClientSecret": "<OAUTH_CLIENT_SECRET>"
+      },
+      "Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo": {
+        "Host": "https://example.secretservercloud.com/SecretServer",
+        "ClientId": "<OAUTH_CLIENT_ID>",
+        "ClientSecret": "<OAUTH_CLIENT_SECRET>"
+      }
     }
-
     ```
 
-    Populate the fields in this object with credentials and configuration data collected in the [requirements](docs/delinea-secretserver-clientcredentials.md#requirements) section.
+3. Edit `manifest.json`:
 
-3. Restart the Universal Orchestrator service.
+    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer-ClientCredentials`. The `extensions` entry key must read `PAMProviders.<provider name>.PAMProvider`, and the section must read `Keyfactor:PAMProviders:<provider name>:InitializationInfo`.
+    * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
+    * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver-clientcredentials.md#requirements) section.
+    * Remove any `Keyfactor:PAMProviders:*:InitializationInfo` sample sections you do not use. In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
+
+    > [!NOTE]
+    > Observed on a Universal Orchestrator: a certificate store field resolved through a PAM provider failed with `No PAM provider registered with name <provider name>` when the extension entry was keyed by the PAM type name instead of the PAM provider name. The orchestrator resolves the provider by the name of the provider you created in Command, so use that name for the extension entry and its `InitializationInfo` section.
+
+    The same values can alternatively be supplied as environment variables of the form `Keyfactor__PAMProviders__<provider name>__InitializationInfo__<Key>` on the orchestrator host.
+
+4. Restart the Universal Orchestrator service after editing `manifest.json`.
 
 
 
@@ -787,20 +862,39 @@ Below is the payload to `POST` to the Keyfactor Command API
         * **Windows Server**: `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions\delinea-secretserver-pam`
         * **Linux**: `/opt/keyfactor/orchestrator/extensions/delinea-secretserver-pam`
 
-2. Included in the release is a `manifest.json` file that contains the following object:
+2. The release contains one manifest file per PAM type. To use `Delinea-SecretServer-Windows`, replace the contents of `manifest.json` with the contents of `Windows-manifest.json` (for example, delete `manifest.json` and rename `Windows-manifest.json` to `manifest.json`). The file contains the following:
     ```json
-
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+      "extensions": {
+        "Keyfactor.Platform.Extensions.IPAMProvider": {
+          "PAMProviders.<COMMAND-PAM-PROVIDER-NAME>.PAMProvider": {
+            "assemblyPath": "delinea-secretserver-pam.dll",
+            "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows"
+          }
         }
+      },
+      "Keyfactor:PAMProviders:<COMMAND-PAM-PROVIDER-NAME>:InitializationInfo": {
+        "Host": "https://example.secretserver.internal/SecretServer"
+      },
+      "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
+        "Host": "https://example.secretserver.internal/SecretServer"
+      }
     }
-
     ```
 
-    Populate the fields in this object with credentials and configuration data collected in the [requirements](docs/delinea-secretserver-windows.md#requirements) section.
+3. Edit `manifest.json`:
 
-3. Restart the Universal Orchestrator service.
+    * Replace every `<COMMAND-PAM-PROVIDER-NAME>` (the extension entry key and the first `InitializationInfo` section) with the exact name of the PAM *provider* you create in Keyfactor Command for this type, that is, the name you give the provider instance, not the PAM type name `Delinea-SecretServer-Windows`. The `extensions` entry key must read `PAMProviders.<provider name>.PAMProvider`, and the section must read `Keyfactor:PAMProviders:<provider name>:InitializationInfo`.
+    * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
+    * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver-windows.md#requirements) section.
+    * Remove any `Keyfactor:PAMProviders:*:InitializationInfo` sample sections you do not use. In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
+
+    > [!NOTE]
+    > Observed on a Universal Orchestrator: a certificate store field resolved through a PAM provider failed with `No PAM provider registered with name <provider name>` when the extension entry was keyed by the PAM type name instead of the PAM provider name. The orchestrator resolves the provider by the name of the provider you created in Command, so use that name for the extension entry and its `InitializationInfo` section.
+
+    The same values can alternatively be supplied as environment variables of the form `Keyfactor__PAMProviders__<provider name>__InitializationInfo__<Key>` on the orchestrator host.
+
+4. Restart the Universal Orchestrator service after editing `manifest.json`.
 
 
 
