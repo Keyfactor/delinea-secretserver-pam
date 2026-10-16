@@ -1,3 +1,21 @@
+# Unreleased
+
+## Breaking Changes
+
+- `(manifest)` The shipped manifest files no longer register the provider under a type-based key. The extension entry in each manifest is now keyed by the provider name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix: the shipped key is the placeholder `YOUR-PROVIDER-NAME` (bracket-free, because a bracketed placeholder key made an orchestrator fail to start in the tested environment; observed once, cause not established), which must be edited to the name of the PAM provider created in Keyfactor Command before the file is used (for a provider named `Delinea`, the key is `Delinea` and the config section is `Keyfactor:PAMProviders:Delinea:InitializationInfo`). An unedited manifest does not register a usable provider. Upgrading over an edited `manifest.json` overwrites it as before.
+
+## Features
+
+- `(manifest)` Ship one manifest file per PAM type: `manifest.json` (`Delinea-SecretServer`), `Password-manifest.json`, `ClientCredentials-manifest.json` and `Windows-manifest.json`. Each contains a provider-named and a type-named `InitializationInfo` section with placeholder values only, and no other sample sections.
+
+## Bug Fixes
+
+- `(docs)` The orchestrator install step in the README now shows the correct manifest for each PAM type (previously the Windows snippet was shown for the base, Password and ClientCredentials types) and documents the PAM provider naming rule (#22, #23).
+
+## Chores
+
+- `(tests)` Add unit tests that validate every shipped manifest against the assembly and the build output.
+
 # v1.3.0
 
 ## Features
