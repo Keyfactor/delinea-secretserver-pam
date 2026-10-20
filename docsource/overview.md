@@ -48,23 +48,25 @@ The environment variable takes precedence and overrides the configuration parame
 
 > [!IMPORTANT]
 > A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4).
-> The `manifest.json` shipped in the release registers the generic `Delinea-SecretServer` provider only. To use a
-> type-specific provider, copy its sample manifest over `manifest.json` and fill in the values. Using more than one
-> Delinea PAM type requires a separate Universal Orchestrator for each.
+> Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
 
-The sample manifests are shipped in a `samples/` subfolder of the extension (not next to `manifest.json`), so the
-Universal Orchestrator never picks them up by accident.
+The release contains one manifest file per PAM type. `manifest.json` registers the generic `Delinea-SecretServer`
+provider. To use a type-specific provider, replace `manifest.json` with that type's manifest file (rename it to
+`manifest.json` on install) and edit it.
 
 | PAM Type / Name | Manifest shipped in the release | Class (`TypeFullName` / `web.config` `mapTo`) |
 | --- | --- | --- |
 | `Delinea-SecretServer` | `manifest.json` (default) | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
-| `Delinea-SecretServer-Password` | `samples/manifest.password.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
-| `Delinea-SecretServer-ClientCredentials` | `samples/manifest.clientcredentials.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
-| `Delinea-SecretServer-Windows` | `samples/manifest.windows.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+| `Delinea-SecretServer-Password` | `Password-manifest.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
+| `Delinea-SecretServer-ClientCredentials` | `ClientCredentials-manifest.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
+| `Delinea-SecretServer-Windows` | `Windows-manifest.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
 
-The extension registration name (`PAMProviders.<name>.PAMProvider`) and the `InitializationInfo` key
-(`Keyfactor:PAMProviders:<name>:InitializationInfo`) must both match the **PAM provider name you created in Keyfactor
-Command** (by default the PAM type name). Any name works as long as all three match.
+Each manifest registers its extension under the name of the **PAM provider you created in Keyfactor Command** (the
+provider instance name, not the PAM type name): the extension entry key is that name itself, with no `PAMProviders.`
+prefix and no `.PAMProvider` suffix, and the first `InitializationInfo` section is named
+`Keyfactor:PAMProviders:<provider name>:InitializationInfo`. The shipped placeholder is `YOUR-PROVIDER-NAME`; replace
+it in both places before use. A second `InitializationInfo` section, named after the PAM type, is kept as shipped.
+An unedited manifest does not register a usable provider.
 
 The type-specific classes use a fixed grant type (`password`, `client_credentials`, `windows`), so no `GrantType`
 value is required for them. For Command-hosted (Command 10) `web.config` registrations, use the class above with the
@@ -72,12 +74,14 @@ assembly name `delinea-secretserver-pam`, for example:
 `mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials, delinea-secretserver-pam"`.
 
 > [!NOTE]
-> Each PAM type's page under [docs/](docs/) contains the exact `manifest.json` and `web.config` snippets for that type.
-> If the generated install steps below show an `InitializationInfo` block that belongs to a different PAM type, use the
-> block from that type's page in [docs/](docs/) instead.
+> Each PAM type's page under [docs/](docs/) contains the exact `manifest.json` and `web.config` snippets for that type,
+> and the manifest files are shipped in the release. The documentation generator has rendered the per-type install
+> steps below incorrectly in the past (the same block shown for every type, or the step text shown as raw text instead
+> of formatted steps). If the generated install steps below look wrong for your PAM type, use the snippet from that
+> type's page in [docs/](docs/) or the shipped manifest file instead.
 
 > [!WARNING]
-> **Upgrading from 1.3.0:** if you hand-edited the registration name or `InitializationInfo` key in `manifest.json`
-> to match a custom PAM provider name, those edits are lost when you replace `manifest.json` with the 1.3.1 version.
-> Re-apply your naming (or rename the provider in Command to match the shipped names). If you use a type-specific
-> provider, copy its sample manifest over `manifest.json`, and remove any `GrantType` workaround you added.
+> **Upgrading from 1.3.0 or an earlier 1.3.1 pre-release:** the shipped manifests changed key shape (see the
+> changelog). Installing 1.3.1 over an edited `manifest.json` overwrites your edits, and an unedited 1.3.1 manifest
+> is not usable until `YOUR-PROVIDER-NAME` is replaced with your PAM provider name. If you use a type-specific
+> provider, install its manifest file as `manifest.json`, and remove any `GrantType` workaround you added.
