@@ -47,9 +47,9 @@ The environment variable takes precedence and overrides the configuration parame
 ## Registration and Naming
 
 > [!IMPORTANT]
-> For each PAM type, the **PAM provider name created in Keyfactor Command**, the **extension registration name** in
-> `manifest.json` (`PAMProviders.<name>.PAMProvider`), and the **`InitializationInfo` key**
-> (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must all be identical. The release `manifest.json` registers all
+> For each PAM type, the **extension registration name** in `manifest.json` (`PAMProviders.<name>.PAMProvider`) and the
+> **`InitializationInfo` key** (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must both match the **PAM provider
+> name you created in Keyfactor Command** (by default the PAM type name, e.g. `Delinea-SecretServer-Password`). The release `manifest.json` registers all
 > four PAM types, each mapped to its own class:
 
 | PAM Type / Name | Class (`TypeFullName` / `web.config` `mapTo`) |
@@ -68,3 +68,9 @@ assembly name `delinea-secretserver-pam`, for example:
 > Each PAM type's page under [docs/](docs/) contains the exact `manifest.json` and `web.config` snippets for that type.
 > If the generated install steps below show an `InitializationInfo` block that belongs to a different PAM type, use the
 > block from that type's page in [docs/](docs/) instead.
+
+> [!WARNING]
+> **Upgrading from 1.3.0:** if you hand-edited the registration name or `InitializationInfo` key in `manifest.json`
+> to match a custom PAM provider name, those edits are lost when you replace `manifest.json` with the 1.3.1 version.
+> Re-apply your naming (or rename the provider in Command to match the shipped names). Also remove any `GrantType`
+> workaround you added for the type-specific providers; it is no longer needed.

@@ -20,8 +20,7 @@ of the process running Keyfactor Command or the Universal Orchestrator.
 
 ## Registration and Naming
 
-The PAM provider name you create in Keyfactor Command, the extension registration name, and the `InitializationInfo`
-key must **all** be `Delinea-SecretServer-Windows`. If they differ, the Universal Orchestrator will not load the provider for this type.
+The extension registration name and the `InitializationInfo` key must both match the PAM provider name you created in Keyfactor Command (by default `Delinea-SecretServer-Windows`). Any provider name works as long as all three match; if they differ, the Universal Orchestrator will not load the provider for this type.
 
 This type always uses Integrated Windows Authentication. A `GrantType` value is not needed and is ignored.
 

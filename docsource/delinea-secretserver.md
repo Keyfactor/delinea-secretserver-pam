@@ -18,8 +18,7 @@ to the chosen authentication method.
 
 ## Registration and Naming
 
-The PAM provider name you create in Keyfactor Command, the extension registration name, and the `InitializationInfo`
-key must **all** be `Delinea-SecretServer`. If they differ, the Universal Orchestrator will not load the provider for this type.
+The extension registration name and the `InitializationInfo` key must both match the PAM provider name you created in Keyfactor Command (by default `Delinea-SecretServer`). Any provider name works as long as all three match; if they differ, the Universal Orchestrator will not load the provider for this type.
 
 This generic type selects its authentication flow from `GrantType` and defaults to `password` when it is not supplied. For new installations prefer the type-specific PAM types.
 

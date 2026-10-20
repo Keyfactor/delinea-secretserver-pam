@@ -16,8 +16,7 @@ integrations where an application account is used instead of a user account.
 
 ## Registration and Naming
 
-The PAM provider name you create in Keyfactor Command, the extension registration name, and the `InitializationInfo`
-key must **all** be `Delinea-SecretServer-ClientCredentials`. If they differ, the Universal Orchestrator will not load the provider for this type.
+The extension registration name and the `InitializationInfo` key must both match the PAM provider name you created in Keyfactor Command (by default `Delinea-SecretServer-ClientCredentials`). Any provider name works as long as all three match; if they differ, the Universal Orchestrator will not load the provider for this type.
 
 This type always uses the `client_credentials` flow. A `GrantType` value is not needed and is ignored. If the registration is missing or its name does not match, the Universal Orchestrator falls back to the generic provider, which defaults to `password`.
 

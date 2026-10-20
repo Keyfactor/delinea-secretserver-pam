@@ -1,5 +1,10 @@
 # v1.3.1
 
+## Upgrade Notes
+
+- If you are on 1.3.0 and hand-edited the extension registration name or the `InitializationInfo` key in `manifest.json` to match a custom PAM provider name, those edits are lost when you replace `manifest.json` with the 1.3.1 version. Re-apply your naming (or rename the provider in Command to match the shipped names). The registration name and `InitializationInfo` key must both match the PAM provider name you created in Command.
+- Remove any `GrantType` workaround you added to `InitializationInfo` for the type-specific providers; it is no longer needed.
+
 ## Bug Fixes
 
 - `manifest.json` now registers all four PAM provider classes (`SecretServerPam`, `SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`). Previously only the generic `SecretServerPam` class was registered, so on a Universal Orchestrator the type-specific PAM types (e.g. `Delinea-SecretServer-ClientCredentials`) loaded the generic class and silently defaulted the grant type to `password` unless `GrantType` was supplied.
