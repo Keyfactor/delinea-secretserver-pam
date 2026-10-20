@@ -62,6 +62,13 @@
               "InstanceLevel": false
             },
             {
+              "Name": "SkipTlsValidation",
+              "DisplayName": "Skip TLS Validation",
+              "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+              "DataType": 1,
+              "InstanceLevel": false
+            },
+            {
               "Name": "SecretId",
               "DisplayName": "Secret ID",
               "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",

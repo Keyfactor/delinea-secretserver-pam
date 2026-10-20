@@ -1,3 +1,20 @@
+# v1.3.1
+
+## Bug Fixes
+
+- `manifest.json` now registers all four PAM provider classes (`SecretServerPam`, `SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`). Previously only the generic `SecretServerPam` class was registered, so on a Universal Orchestrator the type-specific PAM types (e.g. `Delinea-SecretServer-ClientCredentials`) loaded the generic class and silently defaulted the grant type to `password` unless `GrantType` was supplied.
+- Extension registration names (`PAMProviders.<name>.PAMProvider`) now match the `InitializationInfo` keys and the provider `Name` for every type. Previously the registration was named `Delinea` while the `InitializationInfo` key was `Delinea-SecretServer`.
+- The generic `Delinea-SecretServer` PAM type in `integration-manifest.json` now includes the `SkipTlsValidation` parameter, consistent with the type-specific types and the code.
+
+## Documentation
+
+- Each PAM type's page now documents its own `manifest.json` registration and `InitializationInfo` block, and the Command 10 `web.config` registration with the correct class and assembly name (`delinea-secretserver-pam`).
+- Documented that the PAM provider name in Command, the extension registration name, and the `InitializationInfo` key must all match.
+
+## Tests
+
+- Added `ManifestRegistrationTests`: verifies every `IPAMProvider` class is registered, `TypeFullName` resolves, registration names match provider `Name` and `InitializationInfo` keys, templates do not enable `SkipTlsValidation`, and each type-specific class uses its fixed grant type when no `GrantType` is supplied.
+
 # v1.3.0
 
 ## Features

@@ -1,9 +1,21 @@
 {
   "extensions": {
     "Keyfactor.Platform.Extensions.IPAMProvider": {
-      "PAMProviders.Delinea.PAMProvider": {
+      "PAMProviders.Delinea-SecretServer.PAMProvider": {
         "assemblyPath": "delinea-secretserver-pam.dll",
         "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+      },
+      "PAMProviders.Delinea-SecretServer-Password.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword"
+      },
+      "PAMProviders.Delinea-SecretServer-ClientCredentials.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials"
+      },
+      "PAMProviders.Delinea-SecretServer-Windows.PAMProvider": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows"
       }
     }
   },
