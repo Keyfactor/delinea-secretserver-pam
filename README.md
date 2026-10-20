@@ -163,7 +163,7 @@ Create the required PAM Types in the connected Command platform.
 
 ```shell
 # Delinea-SecretServer
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer
+kfutil pam-types create -r delinea-secretserver-pam -n Delinea-SecretServer
 ```
 
 ##### Using the API
@@ -365,7 +365,7 @@ Create the required PAM Types in the connected Command platform.
 
 ```shell
 # Delinea-SecretServer-Password
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Password
+kfutil pam-types create -r delinea-secretserver-pam -n Delinea-SecretServer-Password
 ```
 
 ##### Using the API
@@ -546,7 +546,7 @@ Create the required PAM Types in the connected Command platform.
 
 ```shell
 # Delinea-SecretServer-ClientCredentials
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-ClientCredentials
+kfutil pam-types create -r delinea-secretserver-pam -n Delinea-SecretServer-ClientCredentials
 ```
 
 ##### Using the API
@@ -729,7 +729,7 @@ Create the required PAM Types in the connected Command platform.
 
 ```shell
 # Delinea-SecretServer-Windows
-kfutil pam types-create -r delinea-secretserver-pam -n Delinea-SecretServer-Windows
+kfutil pam-types create -r delinea-secretserver-pam -n Delinea-SecretServer-Windows
 ```
 
 ##### Using the API
