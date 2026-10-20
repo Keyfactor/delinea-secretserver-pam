@@ -78,17 +78,21 @@ The environment variable takes precedence and overrides the configuration parame
 ## Registration and Naming
 
 > [!IMPORTANT]
-> For each PAM type, the **extension registration name** in `manifest.json` (`PAMProviders.<name>.PAMProvider`) and the
-> **`InitializationInfo` key** (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must both match the **PAM provider
-> name you created in Keyfactor Command** (by default the PAM type name, e.g. `Delinea-SecretServer-Password`). The release `manifest.json` registers all
-> four PAM types, each mapped to its own class:
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4).
+> The `manifest.json` shipped in the release registers the generic `Delinea-SecretServer` provider only. To use a
+> type-specific provider, copy its sample manifest over `manifest.json` and fill in the values. Using more than one
+> Delinea PAM type requires a separate Universal Orchestrator for each.
 
-| PAM Type / Name | Class (`TypeFullName` / `web.config` `mapTo`) |
-| --- | --- |
-| `Delinea-SecretServer` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
-| `Delinea-SecretServer-Password` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
-| `Delinea-SecretServer-ClientCredentials` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
-| `Delinea-SecretServer-Windows` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+| PAM Type / Name | Manifest shipped in the release | Class (`TypeFullName` / `web.config` `mapTo`) |
+| --- | --- | --- |
+| `Delinea-SecretServer` | `manifest.json` (default) | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
+| `Delinea-SecretServer-Password` | `manifest.password.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
+| `Delinea-SecretServer-ClientCredentials` | `manifest.clientcredentials.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
+| `Delinea-SecretServer-Windows` | `manifest.windows.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+
+The extension registration name (`PAMProviders.<name>.PAMProvider`) and the `InitializationInfo` key
+(`Keyfactor:PAMProviders:<name>:InitializationInfo`) must both match the **PAM provider name you created in Keyfactor
+Command** (by default the PAM type name). Any name works as long as all three match.
 
 The type-specific classes use a fixed grant type (`password`, `client_credentials`, `windows`), so no `GrantType`
 value is required for them. For Command-hosted (Command 10) `web.config` registrations, use the class above with the
@@ -103,8 +107,8 @@ assembly name `delinea-secretserver-pam`, for example:
 > [!WARNING]
 > **Upgrading from 1.3.0:** if you hand-edited the registration name or `InitializationInfo` key in `manifest.json`
 > to match a custom PAM provider name, those edits are lost when you replace `manifest.json` with the 1.3.1 version.
-> Re-apply your naming (or rename the provider in Command to match the shipped names). Also remove any `GrantType`
-> workaround you added for the type-specific providers; it is no longer needed.
+> Re-apply your naming (or rename the provider in Command to match the shipped names). If you use a type-specific
+> provider, copy its sample manifest over `manifest.json`, and remove any `GrantType` workaround you added.
 
 ## Support
 The Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
@@ -313,8 +317,13 @@ Below is the payload to `POST` to the Keyfactor Command API
     ```json
 
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+            "Host": "https://example.secretservercloud.com/SecretServer",
+            "Username": "<USERNAME>",
+            "Password": "<PASSWORD>",
+            "ClientId": "<OAUTH_CLIENT_ID>",
+            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+            "GrantType": "password|client_credentials|windows"
         }
     }
 
@@ -489,8 +498,13 @@ Below is the payload to `POST` to the Keyfactor Command API
     ```json
 
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+            "Host": "https://example.secretservercloud.com/SecretServer",
+            "Username": "<USERNAME>",
+            "Password": "<PASSWORD>",
+            "ClientId": "<OAUTH_CLIENT_ID>",
+            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+            "GrantType": "password|client_credentials|windows"
         }
     }
 
@@ -665,8 +679,13 @@ Below is the payload to `POST` to the Keyfactor Command API
     ```json
 
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+            "Host": "https://example.secretservercloud.com/SecretServer",
+            "Username": "<USERNAME>",
+            "Password": "<PASSWORD>",
+            "ClientId": "<OAUTH_CLIENT_ID>",
+            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+            "GrantType": "password|client_credentials|windows"
         }
     }
 
@@ -829,8 +848,13 @@ Below is the payload to `POST` to the Keyfactor Command API
     ```json
 
     {
-        "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-            "Host": "https://example.secretserver.internal/SecretServer"
+        "Keyfactor:PAMProviders:Delinea-SecretServer:InitializationInfo": {
+            "Host": "https://example.secretservercloud.com/SecretServer",
+            "Username": "<USERNAME>",
+            "Password": "<PASSWORD>",
+            "ClientId": "<OAUTH_CLIENT_ID>",
+            "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+            "GrantType": "password|client_credentials|windows"
         }
     }
 

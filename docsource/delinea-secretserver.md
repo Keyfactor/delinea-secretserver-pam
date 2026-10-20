@@ -15,17 +15,20 @@ to the chosen authentication method.
   [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
   for information on configuring service accounts and application accounts.
 
-
 ## Registration and Naming
 
-The extension registration name and the `InitializationInfo` key must both match the PAM provider name you created in Keyfactor Command (by default `Delinea-SecretServer`). Any provider name works as long as all three match; if they differ, the Universal Orchestrator will not load the provider for this type.
+The extension registration name and the `InitializationInfo` key in `manifest.json` must both match the PAM provider
+name you created in Keyfactor Command (by default `Delinea-SecretServer`). Any provider name works as long as all three match; if they
+differ, the Universal Orchestrator will not load the provider for this type.
 
 This generic type selects its authentication flow from `GrantType` and defaults to `password` when it is not supplied. For new installations prefer the type-specific PAM types.
 
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4). The shipped `manifest.json` registers this generic type, so no copying is needed; fill in the values. To use a type-specific provider instead, copy its sample manifest over `manifest.json`. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
 ### Universal Orchestrator
 
-The `manifest.json` shipped in the release registers this provider's class under the extension name `Delinea-SecretServer`
-and defines the matching `InitializationInfo` key:
+The sample `manifest.json` contains exactly this registration and `InitializationInfo` block:
 
 ```json
 {
@@ -47,9 +50,6 @@ and defines the matching `InitializationInfo` key:
   }
 }
 ```
-
-The release `manifest.json` registers all four Delinea PAM types, so `extensions` already contains this entry.
-Only populate the `InitializationInfo` block for the type(s) you use.
 
 ### Keyfactor Command host (Command 10 `web.config`)
 

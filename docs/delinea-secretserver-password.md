@@ -16,14 +16,20 @@ and password is used.
 
 ## Registration and Naming
 
-The extension registration name and the `InitializationInfo` key must both match the PAM provider name you created in Keyfactor Command (by default `Delinea-SecretServer-Password`). Any provider name works as long as all three match; if they differ, the Universal Orchestrator will not load the provider for this type.
+The extension registration name and the `InitializationInfo` key in `manifest.json` must both match the PAM provider
+name you created in Keyfactor Command (by default `Delinea-SecretServer-Password`). Any provider name works as long as all three match; if they
+differ, the Universal Orchestrator will not load the provider for this type.
 
 This type always uses the `password` grant. A `GrantType` value is not needed and is ignored.
 
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4). To
+> use this type, copy the sample `manifest.password.json` shipped in the release over `manifest.json` and fill in the values. Using more
+> than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
 ### Universal Orchestrator
 
-The `manifest.json` shipped in the release registers this provider's class under the extension name `Delinea-SecretServer-Password`
-and defines the matching `InitializationInfo` key:
+The sample `manifest.password.json` contains exactly this registration and `InitializationInfo` block:
 
 ```json
 {
@@ -42,9 +48,6 @@ and defines the matching `InitializationInfo` key:
   }
 }
 ```
-
-The release `manifest.json` registers all four Delinea PAM types, so `extensions` already contains this entry.
-Only populate the `InitializationInfo` block for the type(s) you use.
 
 ### Keyfactor Command host (Command 10 `web.config`)
 
