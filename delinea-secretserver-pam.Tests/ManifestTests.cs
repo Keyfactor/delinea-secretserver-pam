@@ -16,29 +16,43 @@ using Newtonsoft.Json.Linq;
 namespace Keyfactor.Extensions.Pam.Delinea.Tests;
 
 /// <summary>
-///     Guards the shipped manifests. A UO supports only ONE PAM provider registration per manifest.json
-///     (until UO v26.4), so <c>manifest.json</c> registers the generic provider and the per-type samples
-///     (<c>manifest.password.json</c> etc.) each register exactly one class, to be copied over
-///     <c>manifest.json</c> by the user.
+///     Guards the manifests shipped with the plugin (one per PAM type; the chosen one is renamed to
+///     <c>manifest.json</c> on install). The manifests are read from the test output directory, where they only
+///     appear if the library project copies them to its build output.
 /// </summary>
-public class ManifestRegistrationTests
+public class ManifestTests
 {
-    private const string ExtensionPointKey = "Keyfactor.Platform.Extensions.IPAMProvider";
-    private const string InitInfoPrefix = "Keyfactor:PAMProviders:";
-    private const string InitInfoSuffix = ":InitializationInfo";
-    private const string RegistrationPrefix = "PAMProviders.";
-    private const string RegistrationSuffix = ".PAMProvider";
+    private const string ProviderPlaceholder = "YOUR-PROVIDER-NAME";
+    private const string ExtensionsKey = "extensions";
+    private const string IPamProviderKey = "Keyfactor.Platform.Extensions.IPAMProvider";
     private const string Host = "https://ss.example.com/SecretServer";
 
-    private static readonly string[] ManifestFiles =
+    private static readonly Assembly ProviderAssembly = typeof(SecretServerPam).Assembly;
+
+    public static IEnumerable<object[]> Manifests => new[]
     {
-        "manifest.json",
-        "samples/manifest.password.json",
-        "samples/manifest.clientcredentials.json",
-        "samples/manifest.windows.json"
+        new object[] { "manifest.json", typeof(SecretServerPam) },
+        new object[] { "Password-manifest.json", typeof(SecretServerPamPassword) },
+        new object[] { "ClientCredentials-manifest.json", typeof(SecretServerPamClientCredentials) },
+        new object[] { "Windows-manifest.json", typeof(SecretServerPamWindows) }
     };
 
-    private static readonly Assembly ProviderAssembly = typeof(SecretServerPam).Assembly;
+    private static JObject Load(string fileName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, fileName);
+        File.Exists(path).Should().BeTrue($"{fileName} must be copied to the build output");
+        return JObject.Parse(File.ReadAllText(path));
+    }
+
+    private static List<JProperty> Sections(JObject manifest)
+        => manifest.Properties().Where(p => p.Name != ExtensionsKey).ToList();
+
+    private static string NameOf(Type t) => ((IPAMProvider)Activator.CreateInstance(t)!).Name;
+
+    private static List<Type> ProviderTypes()
+        => ProviderAssembly.GetTypes()
+            .Where(t => typeof(IPAMProvider).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract)
+            .ToList();
 
     private static string FindUp(params string[] relative)
     {
@@ -54,109 +68,98 @@ public class ManifestRegistrationTests
         throw new FileNotFoundException("Could not locate " + string.Join("/", relative));
     }
 
-    private static JObject LoadManifest(string file)
-        => JObject.Parse(File.ReadAllText(FindUp("delinea-secretserver-pam", file)));
-
-    private static List<Type> ProviderTypes()
-        => ProviderAssembly.GetTypes()
-            .Where(t => typeof(IPAMProvider).IsAssignableFrom(t) && t.IsClass && !t.IsAbstract)
-            .ToList();
-
-    private static string NameOf(Type t) => ((IPAMProvider)Activator.CreateInstance(t)!).Name;
-
-    private static List<JProperty> Registrations(JObject manifest)
-        => ((JObject)manifest["extensions"]![ExtensionPointKey]!).Properties().ToList();
-
-    private static List<JProperty> InitInfos(JObject manifest)
-        => manifest.Properties()
-            .Where(p => p.Name.StartsWith(InitInfoPrefix) && p.Name.EndsWith(InitInfoSuffix))
-            .ToList();
-
-    private static string Between(string s, string prefix, string suffix)
-    {
-        s.Should().StartWith(prefix).And.EndWith(suffix);
-        return s.Substring(prefix.Length, s.Length - prefix.Length - suffix.Length);
-    }
-
-    public static IEnumerable<object[]> Files() => ManifestFiles.Select(f => new object[] { f });
+    // -----------------------------------------------------------------------
+    // Shipped manifest shape
+    // -----------------------------------------------------------------------
 
     [Theory]
-    [MemberData(nameof(Files))]
-    public void Manifest_HasExactlyOneRegistration_AndOneInitializationInfo(string file)
+    [MemberData(nameof(Manifests))]
+    public void Manifest_IsValidJson_AndPresentInBuildOutput(string fileName, Type _)
     {
-        var manifest = LoadManifest(file);
-        Registrations(manifest).Should().ContainSingle();
-        InitInfos(manifest).Should().ContainSingle();
+        Load(fileName).Should().NotBeNull();
     }
 
     [Theory]
-    [MemberData(nameof(Files))]
-    public void Manifest_TypeFullNameResolves_AndNamesMatch(string file)
+    [MemberData(nameof(Manifests))]
+    public void Manifest_HasSingleExtensionEntry_KeyedByBracketFreeProviderPlaceholder(string fileName, Type expectedType)
     {
-        var manifest = LoadManifest(file);
-        var reg = Registrations(manifest).Single();
-        var body = (JObject)reg.Value;
+        var entries = ((JObject)Load(fileName)[ExtensionsKey]![IPamProviderKey]!).Properties().ToList();
 
-        var type = ProviderAssembly.GetType((string)body["TypeFullName"]!, false);
-        type.Should().NotBeNull($"TypeFullName in {file} must resolve");
+        entries.Should().HaveCount(1);
+        entries[0].Name.Should().Be(ProviderPlaceholder);
+        entries[0].Name.Should().NotContain("<").And.NotContain(">");
+        entries[0].Name.Should().NotStartWith("PAMProviders.");
+        entries[0].Name.Should().NotEndWith(".PAMProvider");
+        entries[0].Value["assemblyPath"]!.Value<string>().Should().Be(ProviderAssembly.GetName().Name + ".dll");
+        entries[0].Value["TypeFullName"]!.Value<string>().Should().Be(expectedType.FullName);
+    }
+
+    [Theory]
+    [MemberData(nameof(Manifests))]
+    public void Manifest_TypeFullName_ResolvesToIPamProviderInAssembly(string fileName, Type _)
+    {
+        var typeName = Load(fileName)[ExtensionsKey]![IPamProviderKey]!
+            .Children<JProperty>().Single().Value["TypeFullName"]!.Value<string>()!;
+
+        var type = ProviderAssembly.GetType(typeName, throwOnError: false);
+
+        type.Should().NotBeNull();
         typeof(IPAMProvider).IsAssignableFrom(type).Should().BeTrue();
-        ((string)body["assemblyPath"]!).Should().Be(ProviderAssembly.GetName().Name + ".dll");
-
-        var name = NameOf(type!);
-        Between(reg.Name, RegistrationPrefix, RegistrationSuffix).Should().Be(name);
-        Between(InitInfos(manifest).Single().Name, InitInfoPrefix, InitInfoSuffix).Should().Be(name);
     }
+
+    [Theory]
+    [MemberData(nameof(Manifests))]
+    public void Manifest_HasExactlyTwoConfigSections_ProviderNamedFirst_ThenClassNamed(string fileName, Type expectedType)
+    {
+        var sections = Sections(Load(fileName)).Select(p => p.Name).ToList();
+
+        sections.Should().Equal(
+            $"Keyfactor:PAMProviders:{ProviderPlaceholder}:InitializationInfo",
+            $"Keyfactor:PAMProviders:{NameOf(expectedType)}:InitializationInfo");
+    }
+
+    [Theory]
+    [MemberData(nameof(Manifests))]
+    public void Manifest_Sections_HaveIdenticalPlaceholderValues_AndNoSkipTlsValidationTrue(string fileName, Type _)
+    {
+        var sections = Sections(Load(fileName)).Select(p => (JObject)p.Value).ToList();
+
+        sections.Should().HaveCount(2);
+        JToken.DeepEquals(sections[0], sections[1]).Should().BeTrue();
+
+        foreach (var section in sections)
+        {
+            section.Properties().Should().NotBeEmpty();
+            var skip = section["SkipTlsValidation"]?.ToString();
+            skip?.Trim().ToLowerInvariant().Should().NotBe("true");
+        }
+    }
+
+    [Theory]
+    [InlineData("Password-manifest.json")]
+    [InlineData("ClientCredentials-manifest.json")]
+    [InlineData("Windows-manifest.json")]
+    public void PerTypeManifests_DoNotContainGrantType(string fileName)
+    {
+        foreach (var section in Sections(Load(fileName)))
+            ((JObject)section.Value).Property("GrantType").Should().BeNull();
+    }
+
+    // -----------------------------------------------------------------------
+    // Coverage across manifests / catalog manifest
+    // -----------------------------------------------------------------------
 
     [Fact]
     public void Manifests_Together_CoverAllProviderClasses()
     {
-        var registered = ManifestFiles
-            .Select(f => (string)((JObject)Registrations(LoadManifest(f)).Single().Value)["TypeFullName"]!)
+        var registered = Manifests
+            .Select(m => Load((string)m[0])[ExtensionsKey]![IPamProviderKey]!
+                .Children<JProperty>().Single().Value["TypeFullName"]!.Value<string>())
             .ToList();
 
         registered.Should().OnlyHaveUniqueItems();
         registered.Should().BeEquivalentTo(ProviderTypes().Select(t => t.FullName));
         ProviderTypes().Should().HaveCount(4);
-    }
-
-    [Fact]
-    public void ManifestJson_RegistersGenericProvider()
-    {
-        var reg = Registrations(LoadManifest("manifest.json")).Single();
-        ((string)reg.Value["TypeFullName"]!).Should().Be(typeof(SecretServerPam).FullName);
-    }
-
-    [Theory]
-    [MemberData(nameof(Files))]
-    public void ManifestTemplates_DoNotEnableSkipTlsValidation(string file)
-    {
-        foreach (var p in InitInfos(LoadManifest(file)))
-            ((JObject)p.Value).Property("SkipTlsValidation")?.Value.ToString().Should().NotBe("true");
-    }
-
-    [Theory]
-    [InlineData("samples/manifest.password.json")]
-    [InlineData("samples/manifest.clientcredentials.json")]
-    [InlineData("samples/manifest.windows.json")]
-    public void PerTypeSamples_DoNotContainGrantType(string file)
-        => ((JObject)InitInfos(LoadManifest(file)).Single().Value).Property("GrantType").Should().BeNull();
-
-    [Fact]
-    public void OnlyManifestJson_SitsAtExtensionRoot_SamplesAreUnderSamplesFolder()
-    {
-        // The UO must not pick up any other *.json in the extension folder.
-        var root = Path.GetDirectoryName(FindUp("delinea-secretserver-pam", "manifest.json"))!;
-        Directory.GetFiles(root, "*.json").Select(Path.GetFileName).Should().Equal("manifest.json");
-        Directory.GetFiles(Path.Combine(root, "samples"), "*.json").Select(Path.GetFileName)
-            .Should().BeEquivalentTo("manifest.password.json", "manifest.clientcredentials.json", "manifest.windows.json");
-    }
-
-    [Fact]
-    public void ProviderCsproj_CopiesAllManifestsToOutput()
-    {
-        var csproj = File.ReadAllText(FindUp("delinea-secretserver-pam", "delinea-secretserver-pam.csproj"));
-        foreach (var f in ManifestFiles)
-            csproj.Should().Contain($"Update=\"{f}\"");
     }
 
     [Fact]
