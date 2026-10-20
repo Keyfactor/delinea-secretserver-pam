@@ -33,9 +33,9 @@ public class ManifestRegistrationTests
     private static readonly string[] ManifestFiles =
     {
         "manifest.json",
-        "manifest.password.json",
-        "manifest.clientcredentials.json",
-        "manifest.windows.json"
+        "samples/manifest.password.json",
+        "samples/manifest.clientcredentials.json",
+        "samples/manifest.windows.json"
     };
 
     private static readonly Assembly ProviderAssembly = typeof(SecretServerPam).Assembly;
@@ -135,11 +135,21 @@ public class ManifestRegistrationTests
     }
 
     [Theory]
-    [InlineData("manifest.password.json")]
-    [InlineData("manifest.clientcredentials.json")]
-    [InlineData("manifest.windows.json")]
+    [InlineData("samples/manifest.password.json")]
+    [InlineData("samples/manifest.clientcredentials.json")]
+    [InlineData("samples/manifest.windows.json")]
     public void PerTypeSamples_DoNotContainGrantType(string file)
         => ((JObject)InitInfos(LoadManifest(file)).Single().Value).Property("GrantType").Should().BeNull();
+
+    [Fact]
+    public void OnlyManifestJson_SitsAtExtensionRoot_SamplesAreUnderSamplesFolder()
+    {
+        // The UO must not pick up any other *.json in the extension folder.
+        var root = Path.GetDirectoryName(FindUp("delinea-secretserver-pam", "manifest.json"))!;
+        Directory.GetFiles(root, "*.json").Select(Path.GetFileName).Should().Equal("manifest.json");
+        Directory.GetFiles(Path.Combine(root, "samples"), "*.json").Select(Path.GetFileName)
+            .Should().BeEquivalentTo("manifest.password.json", "manifest.clientcredentials.json", "manifest.windows.json");
+    }
 
     [Fact]
     public void ProviderCsproj_CopiesAllManifestsToOutput()

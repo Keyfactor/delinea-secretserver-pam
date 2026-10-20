@@ -27,12 +27,12 @@ This type always uses Integrated Windows Authentication. A `GrantType` value is 
 
 > [!IMPORTANT]
 > A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4). To
-> use this type, copy the sample `manifest.windows.json` shipped in the release over `manifest.json` and fill in the values. Using more
+> use this type, copy `samples/manifest.windows.json` from the release over `manifest.json` and fill in the values. Using more
 > than one Delinea PAM type requires a separate Universal Orchestrator for each.
 
 ### Universal Orchestrator
 
-The sample `manifest.windows.json` contains exactly this registration and `InitializationInfo` block:
+`samples/manifest.windows.json` contains exactly this registration and `InitializationInfo` block:
 
 ```json
 {

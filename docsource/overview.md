@@ -52,12 +52,15 @@ The environment variable takes precedence and overrides the configuration parame
 > type-specific provider, copy its sample manifest over `manifest.json` and fill in the values. Using more than one
 > Delinea PAM type requires a separate Universal Orchestrator for each.
 
+The sample manifests are shipped in a `samples/` subfolder of the extension (not next to `manifest.json`), so the
+Universal Orchestrator never picks them up by accident.
+
 | PAM Type / Name | Manifest shipped in the release | Class (`TypeFullName` / `web.config` `mapTo`) |
 | --- | --- | --- |
 | `Delinea-SecretServer` | `manifest.json` (default) | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
-| `Delinea-SecretServer-Password` | `manifest.password.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
-| `Delinea-SecretServer-ClientCredentials` | `manifest.clientcredentials.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
-| `Delinea-SecretServer-Windows` | `manifest.windows.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+| `Delinea-SecretServer-Password` | `samples/manifest.password.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
+| `Delinea-SecretServer-ClientCredentials` | `samples/manifest.clientcredentials.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
+| `Delinea-SecretServer-Windows` | `samples/manifest.windows.json` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
 
 The extension registration name (`PAMProviders.<name>.PAMProvider`) and the `InitializationInfo` key
 (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must both match the **PAM provider name you created in Keyfactor

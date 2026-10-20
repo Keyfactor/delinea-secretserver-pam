@@ -24,12 +24,12 @@ This type always uses the `client_credentials` flow. A `GrantType` value is not 
 
 > [!IMPORTANT]
 > A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4). To
-> use this type, copy the sample `manifest.clientcredentials.json` shipped in the release over `manifest.json` and fill in the values. Using more
+> use this type, copy `samples/manifest.clientcredentials.json` from the release over `manifest.json` and fill in the values. Using more
 > than one Delinea PAM type requires a separate Universal Orchestrator for each.
 
 ### Universal Orchestrator
 
-The sample `manifest.clientcredentials.json` contains exactly this registration and `InitializationInfo` block:
+`samples/manifest.clientcredentials.json` contains exactly this registration and `InitializationInfo` block:
 
 ```json
 {
