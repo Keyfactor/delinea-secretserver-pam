@@ -75,6 +75,31 @@ The environment variable takes precedence and overrides the configuration parame
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
 
+## Registration and Naming
+
+> [!IMPORTANT]
+> For each PAM type, the **PAM provider name created in Keyfactor Command**, the **extension registration name** in
+> `manifest.json` (`PAMProviders.<name>.PAMProvider`), and the **`InitializationInfo` key**
+> (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must all be identical. The release `manifest.json` registers all
+> four PAM types, each mapped to its own class:
+
+| PAM Type / Name | Class (`TypeFullName` / `web.config` `mapTo`) |
+| --- | --- |
+| `Delinea-SecretServer` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
+| `Delinea-SecretServer-Password` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
+| `Delinea-SecretServer-ClientCredentials` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
+| `Delinea-SecretServer-Windows` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+
+The type-specific classes use a fixed grant type (`password`, `client_credentials`, `windows`), so no `GrantType`
+value is required for them. For Command-hosted (Command 10) `web.config` registrations, use the class above with the
+assembly name `delinea-secretserver-pam`, for example:
+`mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials, delinea-secretserver-pam"`.
+
+> [!NOTE]
+> Each PAM type's page under [docs/](docs/) contains the exact `manifest.json` and `web.config` snippets for that type.
+> If the generated install steps below show an `InitializationInfo` block that belongs to a different PAM type, use the
+> block from that type's page in [docs/](docs/) instead.
+
 ## Support
 The Delinea Secret Server PAM Provider is supported by Keyfactor for Keyfactor customers. If you have a support issue, please open a support ticket with your Keyfactor representative. If you have a support issue, please open a support ticket via the Keyfactor Support Portal at https://support.keyfactor.com. 
 
@@ -175,6 +200,13 @@ Below is the payload to `POST` to the Keyfactor Command API
             "Name": "GrantType",
             "DisplayName": "Grant Type",
             "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password`, `client_credentials`, or `windows`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatibility.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SkipTlsValidation",
+            "DisplayName": "Skip TLS Validation",
+            "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
             "DataType": 1,
             "InstanceLevel": false
         },
@@ -843,6 +875,7 @@ Below is the payload to `POST` to the Keyfactor Command API
 | ClientId | Secret Server Client ID | The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
 | ClientSecret | Secret Server Client Secret | The client secret used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type. |
 | GrantType | Grant Type | The grant type used to authenticate to the Secret Server instance. Valid values are `password`, `client_credentials`, or `windows`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatibility. |
+| SkipTlsValidation | Skip TLS Validation | Set to `true` to disable TLS certificate validation. Use only in non-production environments. |
 
 
 4. Click **Save**. The PAM provider is now available for use in Keyfactor Command.

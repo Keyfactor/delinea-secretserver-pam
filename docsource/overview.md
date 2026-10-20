@@ -43,3 +43,28 @@ The environment variable takes precedence and overrides the configuration parame
 
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
+
+## Registration and Naming
+
+> [!IMPORTANT]
+> For each PAM type, the **PAM provider name created in Keyfactor Command**, the **extension registration name** in
+> `manifest.json` (`PAMProviders.<name>.PAMProvider`), and the **`InitializationInfo` key**
+> (`Keyfactor:PAMProviders:<name>:InitializationInfo`) must all be identical. The release `manifest.json` registers all
+> four PAM types, each mapped to its own class:
+
+| PAM Type / Name | Class (`TypeFullName` / `web.config` `mapTo`) |
+| --- | --- |
+| `Delinea-SecretServer` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPam` |
+| `Delinea-SecretServer-Password` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword` |
+| `Delinea-SecretServer-ClientCredentials` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials` |
+| `Delinea-SecretServer-Windows` | `Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows` |
+
+The type-specific classes use a fixed grant type (`password`, `client_credentials`, `windows`), so no `GrantType`
+value is required for them. For Command-hosted (Command 10) `web.config` registrations, use the class above with the
+assembly name `delinea-secretserver-pam`, for example:
+`mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials, delinea-secretserver-pam"`.
+
+> [!NOTE]
+> Each PAM type's page under [docs/](docs/) contains the exact `manifest.json` and `web.config` snippets for that type.
+> If the generated install steps below show an `InitializationInfo` block that belongs to a different PAM type, use the
+> block from that type's page in [docs/](docs/) instead.
