@@ -1,25 +1,34 @@
 # v1.3.1
 
+## Breaking Changes
+
+- `(manifest)` The shipped manifest files no longer register the provider under a fixed, type-based key. The `extensions` entry in each manifest is now keyed by the Command PAM provider name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The shipped key is the placeholder `YOUR-PROVIDER-NAME` (bracket-free: a bracketed placeholder key made an orchestrator fail to start in the tested environment; observed once, cause not established). For a provider named `Delinea`, the key is `Delinea` and the config section is `Keyfactor:PAMProviders:Delinea:InitializationInfo`. (Fixes #22)
+
 ## Upgrade Notes
 
-- A Universal Orchestrator supports only one PAM provider registration per `manifest.json` (until UO v26.4). The type-specific sample manifests ship in a `samples/` subfolder so the UO never loads them by accident: copy `samples/manifest.<type>.json` over `manifest.json`. The shipped `manifest.json` registers only the generic `Delinea-SecretServer` provider, as in 1.3.0. To use a type-specific provider, copy its sample manifest (`samples/manifest.password.json`, `samples/manifest.clientcredentials.json` or `samples/manifest.windows.json`) over `manifest.json` and fill in the values. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
-- If you are on 1.3.0 and hand-edited the extension registration name or the `InitializationInfo` key in `manifest.json` to match a custom PAM provider name, those edits are lost when you replace `manifest.json` with the 1.3.1 version. Re-apply your naming, or rename the provider in Command to match. The registration name and `InitializationInfo` key must both match the PAM provider name you created in Command.
-- Remove any `GrantType` workaround you added to `InitializationInfo` for the type-specific providers; it is no longer needed once the matching sample manifest is in place.
+- An unedited `manifest.json` (or per-type manifest) is no longer usable: replace `YOUR-PROVIDER-NAME` with the name of the PAM provider you created in Keyfactor Command, both in the `extensions` entry key and in the first `InitializationInfo` section name. The key shape changed from the 1.3.0 form (`PAMProviders.Delinea.PAMProvider`) and from the earlier 1.3.1 pre-release form (`PAMProviders.<PAM type name>.PAMProvider`).
+- Installing 1.3.1 over an edited `manifest.json` overwrites it. Re-apply your edits to the new file.
+- A Universal Orchestrator supports only one PAM provider registration per `manifest.json` (until UO v26.4). To use a type-specific provider, install its manifest file (`Password-manifest.json`, `ClientCredentials-manifest.json` or `Windows-manifest.json`) as `manifest.json`. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+- Remove any `GrantType` workaround you added to `InitializationInfo` for the type-specific providers; the type-specific classes use a fixed grant type.
+- Remove any other `Keyfactor:PAMProviders:*:InitializationInfo` sections from `manifest.json` (for example, the four sample sections shipped in 1.3.0). Left in place, their placeholder values reached the plugin configuration in testing.
+
+## Features
+
+- `(manifest)` Ship one manifest file per PAM type, following the other Keyfactor PAM providers: `manifest.json` (`Delinea-SecretServer`, base class `SecretServerPam`), `Password-manifest.json`, `ClientCredentials-manifest.json` and `Windows-manifest.json`. Each registers its own class and contains exactly two `InitializationInfo` sections (provider-named and type-named) with placeholder values only. Previously only the base class was registered, so the type-specific classes (`SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`) could not be loaded and type-specific PAM types silently used the generic class and defaulted the grant type to `password`. (Fixes #22)
 
 ## Bug Fixes
 
-- The extension registration name in `manifest.json` (`PAMProviders.Delinea-SecretServer.PAMProvider`) now matches the `InitializationInfo` key (`Delinea-SecretServer`) and the provider `Name`. Previously the registration was named `Delinea` while the `InitializationInfo` key was `Delinea-SecretServer`.
-- The type-specific provider classes (`SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`) can now actually be loaded by the Universal Orchestrator: each has a sample manifest registering that class under its own name. Previously none of them was registered, so type-specific PAM types silently loaded the generic class and defaulted the grant type to `password` unless `GrantType` was supplied.
-- The generic `Delinea-SecretServer` PAM type in `integration-manifest.json` now includes the `SkipTlsValidation` parameter, consistent with the type-specific types and the code.
+- `(manifest)` Each shipped manifest no longer contains sample `InitializationInfo` sections for other PAM types (1.3.0 shipped four), so placeholder values from unused samples no longer reach the plugin configuration. (Fixes #22)
+- `(params)` The generic `Delinea-SecretServer` PAM type in `integration-manifest.json` now includes the `SkipTlsValidation` parameter, consistent with the type-specific types and the code.
+- `(docs)` The orchestrator install step now shows the correct manifest for each PAM type (previously the Windows snippet was shown for the base, Password and ClientCredentials types). (Fixes #23)
 
 ## Documentation
 
-- Each PAM type's page now documents its own registration, `InitializationInfo` block and sample manifest, and the Command 10 `web.config` registration with the correct class and assembly name (`delinea-secretserver-pam`).
-- Documented that the registration name and `InitializationInfo` key must match the PAM provider name created in Command, and the one-provider-per-`manifest.json` limitation.
+- `(docs)` Each PAM type's page documents its own install steps (including renaming the per-type manifest to `manifest.json`), the provider naming rule, the one-provider-per-`manifest.json` limitation, and the Command 10 `web.config` registration with the correct class and assembly name (`delinea-secretserver-pam`). (Fixes #23)
 
 ## Tests
 
-- Added `ManifestRegistrationTests`: each shipped manifest has exactly one registration whose `TypeFullName` resolves and whose name matches the class `Name` and the single `InitializationInfo` key; together the manifests cover all four classes; no template enables `SkipTlsValidation`; all manifests are copied to the build output; and each type-specific class uses its fixed grant type when no `GrantType` is supplied.
+- `(tests)` Add `ManifestTests`, which validate every shipped manifest against the assembly and the build output: valid JSON and copied to the build output; exactly one `IPAMProvider` entry keyed exactly `YOUR-PROVIDER-NAME`; no angle brackets, `PAMProviders.` prefix or `.PAMProvider` suffix; `TypeFullName` resolves to an `IPAMProvider` class; exactly two sections (provider-named first, then named after the class `Name`) with identical placeholder values and no `SkipTlsValidation: true`; together the manifests cover all four classes; every PAM type in `integration-manifest.json` matches a provider class and has `SkipTlsValidation`; and each type-specific class uses its fixed grant type when no `GrantType` is supplied.
 
 # v1.3.0
 
