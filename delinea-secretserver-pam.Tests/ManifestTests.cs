@@ -109,30 +109,34 @@ public class ManifestTests
 
     [Theory]
     [MemberData(nameof(Manifests))]
-    public void Manifest_HasExactlyTwoConfigSections_ProviderNamedFirst_ThenClassNamed(string fileName, Type expectedType)
+    public void Manifest_HasExactlyOneConfigSection_NamedForProviderPlaceholder(string fileName, Type _)
     {
         var sections = Sections(Load(fileName)).Select(p => p.Name).ToList();
 
-        sections.Should().Equal(
-            $"Keyfactor:PAMProviders:{ProviderPlaceholder}:InitializationInfo",
-            $"Keyfactor:PAMProviders:{NameOf(expectedType)}:InitializationInfo");
+        sections.Should().Equal($"Keyfactor:PAMProviders:{ProviderPlaceholder}:InitializationInfo");
     }
 
     [Theory]
     [MemberData(nameof(Manifests))]
-    public void Manifest_Sections_HaveIdenticalPlaceholderValues_AndNoSkipTlsValidationTrue(string fileName, Type _)
+    public void Manifest_Section_HasPlaceholderValues_AndNoSkipTlsValidationTrue(string fileName, Type _)
     {
-        var sections = Sections(Load(fileName)).Select(p => (JObject)p.Value).ToList();
+        var section = (JObject)Sections(Load(fileName)).Single().Value;
 
-        sections.Should().HaveCount(2);
-        JToken.DeepEquals(sections[0], sections[1]).Should().BeTrue();
+        section.Properties().Should().NotBeEmpty();
 
-        foreach (var section in sections)
+        foreach (var p in section.Properties())
         {
-            section.Properties().Should().NotBeEmpty();
-            var skip = section["SkipTlsValidation"]?.ToString();
-            skip?.Trim().ToLowerInvariant().Should().NotBe("true");
+            var value = p.Value.ToString();
+            if (p.Name == "Host")
+                value.Should().StartWith("https://example.", p.Name);
+            else if (p.Name == "GrantType")
+                value.Should().Be("password|client_credentials|windows", p.Name);
+            else
+                value.Should().MatchRegex("^<[A-Z_]+>$", p.Name);
         }
+
+        var skip = section["SkipTlsValidation"]?.ToString();
+        skip?.Trim().ToLowerInvariant().Should().NotBe("true");
     }
 
     [Theory]

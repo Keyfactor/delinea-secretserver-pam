@@ -9,8 +9,5 @@
   },
   "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
     "Host": "https://example.secretserver.internal/SecretServer"
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-Windows:InitializationInfo": {
-    "Host": "https://example.secretserver.internal/SecretServer"
   }
 }
