@@ -45,20 +45,14 @@ integrations where an application account is used instead of a user account.
         "Host": "https://example.secretservercloud.com/SecretServer",
         "ClientId": "<OAUTH_CLIENT_ID>",
         "ClientSecret": "<OAUTH_CLIENT_SECRET>"
-      },
-      "Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo": {
-        "Host": "https://example.secretservercloud.com/SecretServer",
-        "ClientId": "<OAUTH_CLIENT_ID>",
-        "ClientSecret": "<OAUTH_CLIENT_SECRET>"
       }
     }
     ```
 
 3. Edit `manifest.json`:
 
-    * Replace `YOUR-PROVIDER-NAME` (the extension entry key and the first `InitializationInfo` section name) with the name of the PAM provider you created in Keyfactor Command for this type, that is, the name you gave the provider instance, not the PAM type name `Delinea-SecretServer-ClientCredentials`. The `extensions` entry key is that name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix, and the first configuration section uses the same name: `Keyfactor:PAMProviders:<provider name>:InitializationInfo`. For example, for a provider named `Delinea`, the `extensions` entry key is `"Delinea": { ... }` and the section is `"Keyfactor:PAMProviders:Delinea:InitializationInfo": { ... }`.
-    * Keep the section named `Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo`. Its name is the PAM type (the provider class name), which the plugin's in-extension lookup uses. Its values must match the provider-named section.
-    * Replace the placeholder values in both sections with the values collected in the [requirements](docs/delinea-secretserver-clientcredentials.md#requirements) section.
+    * Replace `YOUR-PROVIDER-NAME` (the extension entry key and the `InitializationInfo` section name) with the name of the PAM provider you created in Keyfactor Command for this type, that is, the name you gave the provider instance, not the PAM type name `Delinea-SecretServer-ClientCredentials`. The `extensions` entry key is that name itself, with no `PAMProviders.` prefix and no `.PAMProvider` suffix, and the configuration section uses the same name: `Keyfactor:PAMProviders:<provider name>:InitializationInfo`. For example, for a provider named `Delinea`, the `extensions` entry key is `"Delinea": { ... }` and the section is `"Keyfactor:PAMProviders:Delinea:InitializationInfo": { ... }`.
+    * Replace the placeholder values in the section with the values collected in the [requirements](docs/delinea-secretserver-clientcredentials.md#requirements) section.
     * Do not leave any other `Keyfactor:PAMProviders:*:InitializationInfo` sections in `manifest.json` (for example, sections left over from the 1.3.0 manifest). In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
 
     > [!NOTE]
@@ -71,7 +65,7 @@ integrations where an application account is used instead of a user account.
 
 ## Registration and Naming
 
-The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-ClientCredentials`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The first `InitializationInfo` section uses the same name. The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. The second section, named after the PAM type `Delinea-SecretServer-ClientCredentials`, is kept as shipped. Any provider name works as long as the extension key and the first section name match the provider name in Command.
+The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-ClientCredentials`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.
 
 This type always uses the `client_credentials` flow. A `GrantType` value is not needed and is ignored. If the type-specific class is not the one registered in `manifest.json`, the Universal Orchestrator loads the generic provider, which defaults to `password`.
 
@@ -80,7 +74,7 @@ This type always uses the `client_credentials` flow. A `GrantType` value is not 
 
 ### Universal Orchestrator
 
-The release ships this registration as `ClientCredentials-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and these `InitializationInfo` sections:
+The release ships this registration as `ClientCredentials-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and this `InitializationInfo` section:
 
 ```json
 {
@@ -93,11 +87,6 @@ The release ships this registration as `ClientCredentials-manifest.json`; rename
     }
   },
   "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
-    "Host": "https://example.secretservercloud.com/SecretServer",
-    "ClientId": "<OAUTH_CLIENT_ID>",
-    "ClientSecret": "<OAUTH_CLIENT_SECRET>"
-  },
-  "Keyfactor:PAMProviders:Delinea-SecretServer-ClientCredentials:InitializationInfo": {
     "Host": "https://example.secretservercloud.com/SecretServer",
     "ClientId": "<OAUTH_CLIENT_ID>",
     "ClientSecret": "<OAUTH_CLIENT_SECRET>"

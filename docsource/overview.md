@@ -63,10 +63,10 @@ provider. To use a type-specific provider, replace `manifest.json` with that typ
 
 Each manifest registers its extension under the name of the **PAM provider you created in Keyfactor Command** (the
 provider instance name, not the PAM type name): the extension entry key is that name itself, with no `PAMProviders.`
-prefix and no `.PAMProvider` suffix, and the first `InitializationInfo` section is named
+prefix and no `.PAMProvider` suffix, and the `InitializationInfo` section is named
 `Keyfactor:PAMProviders:<provider name>:InitializationInfo`. The shipped placeholder is `YOUR-PROVIDER-NAME`; replace
-it in both places before use. A second `InitializationInfo` section, named after the PAM type, is kept as shipped.
-An unedited manifest does not register a usable provider.
+it in both places before use. Each manifest contains only this one section; no section named after the PAM type is
+needed. An unedited manifest does not register a usable provider.
 
 The type-specific classes use a fixed grant type (`password`, `client_credentials`, `windows`), so no `GrantType`
 value is required for them. For Command-hosted (Command 10) `web.config` registrations, use the class above with the
@@ -81,7 +81,7 @@ assembly name `delinea-secretserver-pam`, for example:
 > type's page in [docs/](docs/) or the shipped manifest file instead.
 
 > [!WARNING]
-> **Upgrading from 1.3.0 or an earlier 1.3.1 pre-release:** the shipped manifests changed key shape (see the
+> **Upgrading from 1.3.0:** the shipped manifests changed key shape (see the
 > changelog). Installing 1.3.1 over an edited `manifest.json` overwrites your edits, and an unedited 1.3.1 manifest
 > is not usable until `YOUR-PROVIDER-NAME` is replaced with your PAM provider name. If you use a type-specific
 > provider, install its manifest file as `manifest.json`, and remove any `GrantType` workaround you added.
