@@ -6,7 +6,7 @@
 
 ## Upgrade Notes
 
-- An unedited `manifest.json` (or per-type manifest) is no longer usable: replace `YOUR-PROVIDER-NAME` with the name of the PAM provider you created in Keyfactor Command, both in the `extensions` entry key and in the first `InitializationInfo` section name. The key shape changed from the 1.3.0 form (`PAMProviders.Delinea.PAMProvider`) and from the earlier 1.3.1 pre-release form (`PAMProviders.<PAM type name>.PAMProvider`).
+- An unedited `manifest.json` (or per-type manifest) is no longer usable: replace `YOUR-PROVIDER-NAME` with the name of the PAM provider you created in Keyfactor Command, both in the `extensions` entry key and in the `InitializationInfo` section name. The key shape changed from the 1.3.0 form (`PAMProviders.Delinea.PAMProvider`).
 - Installing 1.3.1 over an edited `manifest.json` overwrites it. Re-apply your edits to the new file.
 - A Universal Orchestrator supports only one PAM provider registration per `manifest.json` (until UO v26.4). To use a type-specific provider, install its manifest file (`Password-manifest.json`, `ClientCredentials-manifest.json` or `Windows-manifest.json`) as `manifest.json`. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
 - Remove any `GrantType` workaround you added to `InitializationInfo` for the type-specific providers; the type-specific classes use a fixed grant type.
@@ -14,7 +14,7 @@
 
 ## Features
 
-- `(manifest)` Ship one manifest file per PAM type, following the other Keyfactor PAM providers: `manifest.json` (`Delinea-SecretServer`, base class `SecretServerPam`), `Password-manifest.json`, `ClientCredentials-manifest.json` and `Windows-manifest.json`. Each registers its own class and contains exactly two `InitializationInfo` sections (provider-named and type-named) with placeholder values only. Previously only the base class was registered, so the type-specific classes (`SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`) could not be loaded and type-specific PAM types silently used the generic class and defaulted the grant type to `password`. (Fixes #22)
+- `(manifest)` Ship one manifest file per PAM type, following the other Keyfactor PAM providers: `manifest.json` (`Delinea-SecretServer`, base class `SecretServerPam`), `Password-manifest.json`, `ClientCredentials-manifest.json` and `Windows-manifest.json`. Each registers its own class and contains exactly one `InitializationInfo` section, named after the provider (`Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo`), with placeholder values only. Previously only the base class was registered, so the type-specific classes (`SecretServerPamPassword`, `SecretServerPamClientCredentials`, `SecretServerPamWindows`) could not be loaded and type-specific PAM types silently used the generic class and defaulted the grant type to `password`. (Fixes #22)
 
 ## Bug Fixes
 
@@ -28,7 +28,7 @@
 
 ## Tests
 
-- `(tests)` Add `ManifestTests`, which validate every shipped manifest against the assembly and the build output: valid JSON and copied to the build output; exactly one `IPAMProvider` entry keyed exactly `YOUR-PROVIDER-NAME`; no angle brackets, `PAMProviders.` prefix or `.PAMProvider` suffix; `TypeFullName` resolves to an `IPAMProvider` class; exactly two sections (provider-named first, then named after the class `Name`) with identical placeholder values and no `SkipTlsValidation: true`; together the manifests cover all four classes; every PAM type in `integration-manifest.json` matches a provider class and has `SkipTlsValidation`; and each type-specific class uses its fixed grant type when no `GrantType` is supplied.
+- `(tests)` Add `ManifestTests`, which validate every shipped manifest against the assembly and the build output: valid JSON and copied to the build output; exactly one `IPAMProvider` entry keyed exactly `YOUR-PROVIDER-NAME`; no angle brackets, `PAMProviders.` prefix or `.PAMProvider` suffix; `TypeFullName` resolves to an `IPAMProvider` class; exactly one `InitializationInfo` section, named `Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo`, with placeholder values and no `SkipTlsValidation: true`; together the manifests cover all four classes; every PAM type in `integration-manifest.json` matches a provider class and has `SkipTlsValidation`; and each type-specific class uses its fixed grant type when no `GrantType` is supplied.
 
 # v1.3.0
 
