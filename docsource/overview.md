@@ -37,9 +37,9 @@ value. The provider treats `N/A` (case-insensitive) as equivalent to an empty va
 All PAM types support skipping TLS certificate validation for non-production environments via either:
 
 - The `SkipTlsValidation` configuration parameter (set to `true` in the PAM provider instance)
-- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host)
+- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host that runs the provider)
 
-The environment variable takes precedence and overrides the configuration parameter.
+Validation is skipped if either source enables it. A value of `false` in one source does not override a `true` in the other.
 
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
