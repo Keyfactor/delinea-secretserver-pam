@@ -134,10 +134,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
         {
             Logger.MethodEntry();
 
+            // Fill any missing server parameters from the environment first, so the invocation record below
+            // reports the effective Host and grant type rather than the raw (possibly empty) parameters.
+            var effectiveServerConfiguration =
+                ApplyEnvironmentFallbacks(NormalizeConfig(serverConfigurationParameters), out var logGrantType);
+
             instanceParameters.TryGetValue(DelineaConfiguration.SECRET_ID, out var logSecretId);
             instanceParameters.TryGetValue(DelineaConfiguration.SECRET_FIELD_NAME, out var logFieldName);
-            serverConfigurationParameters.TryGetValue(DelineaConfiguration.SECRET_SERVER_URL, out var logUrl);
-            var logGrantType = ResolveGrantType(serverConfigurationParameters);
+            effectiveServerConfiguration.TryGetValue(DelineaConfiguration.SECRET_SERVER_URL, out var logUrl);
 
             // UserName is the OS service account identity — IPAMProvider does not expose the Keyfactor caller
             Logger.LogInformation(
@@ -149,7 +153,7 @@ namespace Keyfactor.Extensions.Pam.Delinea
             Logger.LogInformation("Operation correlation ID | CorrelationId={CorrelationId}", correlationId);
             Logger.LogTrace("instanceParameters: {@InstanceParameters}", instanceParameters);
 
-            var config = BuildDelineaConfiguration(instanceParameters, serverConfigurationParameters);
+            var config = BuildDelineaConfiguration(instanceParameters, effectiveServerConfiguration);
 
             // Use the injected client (tests) or build a real one (production)
             var client = _httpClient ?? BuildHttpClient(config.GrantType, config.SkipTlsValidation);
@@ -525,9 +529,14 @@ namespace Keyfactor.Extensions.Pam.Delinea
                 return;
             }
 
-            Logger.LogError("{ErrorPrefix} '{ParamName}' not provided", errorPrefix, paramName);
+            var envVarName = DelineaConfiguration.GetEnvironmentVariableName(paramName);
+            var message = envVarName == null
+                ? $"{errorPrefix} '{paramName}' not provided"
+                : $"{errorPrefix} '{paramName}' not provided (environment variable {envVarName} not set)";
+
+            Logger.LogError("{Message}", message);
             Logger.MethodExit();
-            throw new InvalidClientConfigurationException($"{errorPrefix} '{paramName}' not provided");
+            throw new InvalidClientConfigurationException(message);
         }
 
         private void ValidatePasswordGrantCredentials(IReadOnlyDictionary<string, string> config)
@@ -550,10 +559,80 @@ namespace Keyfactor.Extensions.Pam.Delinea
         // Configuration builder
         // ---------------------------------------------------------------------------
 
+        private static bool IsNotApplicable(string value)
+            => string.Equals(value?.Trim(), "N/A", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        ///     True when a configuration value should be treated as not supplied: null, empty, or the
+        ///     <c>N/A</c> dummy value (case-insensitive, surrounding whitespace ignored).
+        /// </summary>
+        private static bool IsUnset(string value)
+            => string.IsNullOrEmpty(value) || IsNotApplicable(value);
+
         private static IReadOnlyDictionary<string, string> NormalizeConfig(IReadOnlyDictionary<string, string> config)
             => config.ToDictionary(
                 kvp => kvp.Key,
-                kvp => string.Equals(kvp.Value?.Trim(), "N/A", StringComparison.OrdinalIgnoreCase) ? "" : kvp.Value ?? "");
+                kvp => IsNotApplicable(kvp.Value) ? "" : kvp.Value ?? "");
+
+        /// <summary>
+        ///     Returns a copy of the normalized server configuration with environment-variable fallbacks applied.
+        ///     A PAM parameter always wins; an environment variable is used only when the parameter is missing,
+        ///     empty, or <c>N/A</c>. Host and GrantType are filled first, the grant type is then resolved through
+        ///     <see cref="ResolveGrantType" /> (so the type-specific providers ignore the GrantType variable), and
+        ///     only the credential keys of that grant type are filled. Values are never logged, only their source.
+        /// </summary>
+        private IReadOnlyDictionary<string, string> ApplyEnvironmentFallbacks(
+            IReadOnlyDictionary<string, string> normalizedConfig,
+            out string grantType)
+        {
+            var merged = normalizedConfig.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            FillFromEnvironment(merged, DelineaConfiguration.SECRET_SERVER_URL);
+            FillFromEnvironment(merged, DelineaConfiguration.GRANT_TYPE);
+
+            grantType = ResolveGrantType(merged);
+            Logger.LogDebug("Effective grant type for this invocation: '{GrantType}'", grantType);
+
+            switch (grantType)
+            {
+                case "password":
+                    FillFromEnvironment(merged, DelineaConfiguration.USERNAME);
+                    FillFromEnvironment(merged, DelineaConfiguration.PASSWORD);
+                    break;
+                case "client_credentials":
+                    FillFromEnvironment(merged, DelineaConfiguration.CLIENT_ID);
+                    FillFromEnvironment(merged, DelineaConfiguration.CLIENT_SECRET);
+                    break;
+                // windows has no credential parameters; an unknown value is rejected by validation later
+            }
+
+            return merged;
+        }
+
+        private void FillFromEnvironment(IDictionary<string, string> config, string parameterKey)
+        {
+            if (config.TryGetValue(parameterKey, out var current) && !IsUnset(current))
+            {
+                Logger.LogDebug("Server configuration '{ParamName}' supplied by PAM parameter", parameterKey);
+                return;
+            }
+
+            var envVarName = DelineaConfiguration.GetEnvironmentVariableName(parameterKey);
+            var envValue = envVarName == null ? null : Environment.GetEnvironmentVariable(envVarName);
+
+            // Used verbatim (no trimming): passwords may legitimately contain whitespace.
+            if (IsUnset(envValue))
+            {
+                Logger.LogDebug(
+                    "Server configuration '{ParamName}' not supplied by PAM parameter or environment variable {EnvVar}",
+                    parameterKey, envVarName);
+                return;
+            }
+
+            config[parameterKey] = envValue;
+            Logger.LogDebug("Server configuration '{ParamName}' supplied by environment variable {EnvVar}",
+                parameterKey, envVarName);
+        }
 
         private DelineaConfiguration BuildDelineaConfiguration(
             IReadOnlyDictionary<string, string> instanceParameters,

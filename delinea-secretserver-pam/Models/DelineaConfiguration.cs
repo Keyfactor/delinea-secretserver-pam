@@ -82,6 +82,53 @@ namespace Keyfactor.Extensions.Pam.Delinea.Models
         public static string SKIP_TLS_VALIDATION => "SkipTlsValidation";
 
         /// <summary>
+        ///     Environment variable that supplies the <c>Host</c> server parameter when the PAM parameter is
+        ///     missing, empty, or <c>N/A</c>.
+        /// </summary>
+        public static string ENV_SECRET_SERVER_URL => "KEYFACTOR_PAM_DELINEA_HOST";
+
+        /// <summary>
+        ///     Environment variable that supplies the <c>GrantType</c> server parameter. Honoured only by the
+        ///     generic <c>Delinea-SecretServer</c> type; the type-specific types have a fixed grant type.
+        /// </summary>
+        public static string ENV_GRANT_TYPE => "KEYFACTOR_PAM_DELINEA_GRANT_TYPE";
+
+        /// <summary>
+        ///     Environment variable that supplies the <c>Username</c> server parameter (password grant only).
+        /// </summary>
+        public static string ENV_USERNAME => "KEYFACTOR_PAM_DELINEA_USERNAME";
+
+        /// <summary>
+        ///     Environment variable that supplies the <c>Password</c> server parameter (password grant only).
+        /// </summary>
+        public static string ENV_PASSWORD => "KEYFACTOR_PAM_DELINEA_PASSWORD";
+
+        /// <summary>
+        ///     Environment variable that supplies the <c>ClientId</c> server parameter (client_credentials grant only).
+        /// </summary>
+        public static string ENV_CLIENT_ID => "KEYFACTOR_PAM_DELINEA_CLIENT_ID";
+
+        /// <summary>
+        ///     Environment variable that supplies the <c>ClientSecret</c> server parameter (client_credentials grant only).
+        /// </summary>
+        public static string ENV_CLIENT_SECRET => "KEYFACTOR_PAM_DELINEA_CLIENT_SECRET";
+
+        /// <summary>
+        ///     Returns the environment variable that backs a server configuration parameter, or <c>null</c> when the
+        ///     parameter has no environment fallback (for example <c>SecretId</c> and <c>SecretFieldName</c>).
+        /// </summary>
+        public static string GetEnvironmentVariableName(string parameterKey)
+        {
+            if (parameterKey == SECRET_SERVER_URL) return ENV_SECRET_SERVER_URL;
+            if (parameterKey == GRANT_TYPE) return ENV_GRANT_TYPE;
+            if (parameterKey == USERNAME) return ENV_USERNAME;
+            if (parameterKey == PASSWORD) return ENV_PASSWORD;
+            if (parameterKey == CLIENT_ID) return ENV_CLIENT_ID;
+            if (parameterKey == CLIENT_SECRET) return ENV_CLIENT_SECRET;
+            return null;
+        }
+
+        /// <summary>
         ///     The base URL of the Delinea Secret Server.
         /// </summary>
         [Required(ErrorMessage = "The SecretServerUrl field is required.")]
