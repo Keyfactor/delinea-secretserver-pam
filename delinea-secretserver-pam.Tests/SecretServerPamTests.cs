@@ -76,7 +76,8 @@ public class SecretServerPamTests
     // SecretServerPam (backwards-compatible, GrantType-driven)
     // ---------------------------------------------------------------------------
 
-    public class BackwardsCompatibleType
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class BackwardsCompatibleType : ProviderEnvironmentTestBase
     {
         [Fact]
         public void Name_IsDelineaSecretServer()
@@ -191,7 +192,8 @@ public class SecretServerPamTests
     // SecretServerPamPassword
     // ---------------------------------------------------------------------------
 
-    public class PasswordType
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class PasswordType : ProviderEnvironmentTestBase
     {
         [Fact]
         public void Name_IsDelineaSecretServerPassword()
@@ -464,7 +466,8 @@ public class SecretServerPamTests
     // SecretServerPamClientCredentials
     // ---------------------------------------------------------------------------
 
-    public class ClientCredentialsType
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class ClientCredentialsType : ProviderEnvironmentTestBase
     {
         [Fact]
         public void Name_IsDelineaSecretServerClientCredentials()
@@ -600,7 +603,8 @@ public class SecretServerPamTests
     // SecretServerPamWindows
     // ---------------------------------------------------------------------------
 
-    public class WindowsType
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class WindowsType : ProviderEnvironmentTestBase
     {
         [Fact]
         public void Name_IsDelineaSecretServerWindows()
@@ -713,7 +717,8 @@ public class SecretServerPamTests
     // Shared validation — tested via SecretServerPamPassword as a representative type
     // ---------------------------------------------------------------------------
 
-    public class SharedValidation
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class SharedValidation : ProviderEnvironmentTestBase
     {
         [Theory]
         [InlineData("")]
@@ -804,11 +809,10 @@ public class SecretServerPamTests
     // SkipTlsValidation — config parameter and environment variable
     // ---------------------------------------------------------------------------
 
-    public class SkipTlsValidation : IDisposable
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class SkipTlsValidation : ProviderEnvironmentTestBase
     {
         private const string EnvVar = "KEYFACTOR_PAM_SKIP_TLS_VALIDATION";
-
-        public void Dispose() => Environment.SetEnvironmentVariable(EnvVar, null);
 
         private static Dictionary<string, string> InstanceParams() => new()
         {
@@ -883,7 +887,8 @@ public class SecretServerPamTests
     // N/A dummy value — treated as absent/empty input
     // ---------------------------------------------------------------------------
 
-    public class NaDummyValue
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class NaDummyValue : ProviderEnvironmentTestBase
     {
         private static TestHttpMessageHandler HappyPathHandler() => new TestHttpMessageHandler((req, ct) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -954,7 +959,8 @@ public class SecretServerPamTests
     // client_credentials GrantType bug fix — must not send "password" grant type
     // ---------------------------------------------------------------------------
 
-    public class ClientCredentialsGrantTypeFix
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class ClientCredentialsGrantTypeFix : ProviderEnvironmentTestBase
     {
         private static Dictionary<string, string> InstanceParams() => new()
         {
@@ -997,10 +1003,551 @@ public class SecretServerPamTests
     }
 
     // ---------------------------------------------------------------------------
+    // KEYFACTOR_PAM_DELINEA_* environment-variable fallback for server parameters
+    // ---------------------------------------------------------------------------
+
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class EnvironmentVariableFallback : ProviderEnvironmentTestBase
+    {
+        private const string EnvHost = "KEYFACTOR_PAM_DELINEA_HOST";
+        private const string EnvGrantType = "KEYFACTOR_PAM_DELINEA_GRANT_TYPE";
+        private const string EnvUsername = "KEYFACTOR_PAM_DELINEA_USERNAME";
+        private const string EnvPassword = "KEYFACTOR_PAM_DELINEA_PASSWORD";
+        private const string EnvClientId = "KEYFACTOR_PAM_DELINEA_CLIENT_ID";
+        private const string EnvClientSecret = "KEYFACTOR_PAM_DELINEA_CLIENT_SECRET";
+
+        // Values that differ from every Fake* constant so assertions can tell the sources apart.
+        private const string EnvHostValue = "https://env-host.example.com/SecretServer";
+        private const string EnvUsernameValue = "env-user";
+        private const string EnvPasswordValue = "  env P@ss w0rd!  "; // leading/trailing spaces must survive
+        private const string EnvClientIdValue = "env-client-id";
+        private const string EnvClientSecretValue = "env-cl13nt-s3cr3t";
+
+        private const string CapturedHostSegment = "env-host.example.com";
+
+        // The forms a parameter can take when it is "not supplied": null means the key is absent.
+        public static IEnumerable<object?[]> AbsentForms => new[]
+        {
+            new object?[] { null }, new object?[] { "" }, new object?[] { "N/A" }, new object?[] { " n/a " }
+        };
+
+        public static IEnumerable<object?[]> KindsByAbsentForm()
+        {
+            foreach (var kind in new[] { "generic", "password", "clientcredentials", "windows" })
+            foreach (var form in new string?[] { null, "", "N/A", " n/a " })
+                yield return new object?[] { kind, form };
+        }
+
+        public static IEnumerable<object?[]> PasswordGrantKindsByAbsentForm()
+        {
+            foreach (var kind in new[] { "generic", "password" })
+            foreach (var form in new string?[] { null, "", "N/A", " n/a " })
+                yield return new object?[] { kind, form };
+        }
+
+        public static IEnumerable<object?[]> ClientCredentialsGrantKindsByAbsentForm()
+        {
+            foreach (var kind in new[] { "generic-cc", "clientcredentials" })
+            foreach (var form in new string?[] { null, "", "N/A", " n/a " })
+                yield return new object?[] { kind, form };
+        }
+
+        // -----------------------------------------------------------------------
+        // Helpers
+        // -----------------------------------------------------------------------
+
+        private sealed class Recorder
+        {
+            public List<Uri> Uris { get; } = new();
+            public string? TokenBody { get; private set; }
+            public bool TokenRequested => Uris.Any(u => u.AbsolutePath.EndsWith("/oauth2/token"));
+            public Uri SecretUri => Uris.Last(u => u.AbsolutePath.Contains("/api/v1/secrets/"));
+
+            public TestHttpMessageHandler Handler() => new(async (req, ct) =>
+            {
+                Uris.Add(req.RequestUri!);
+                if (req.RequestUri!.AbsolutePath.EndsWith("/oauth2/token"))
+                {
+                    TokenBody = await req.Content!.ReadAsStringAsync(ct);
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                        { Content = new StringContent(BuildTokenResponse()) };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                    { Content = new StringContent(BuildSecretResponse()) };
+            });
+
+            /// <summary>Decoded value of a field in the form-encoded token request body.</summary>
+            public string? TokenField(string name)
+                => System.Web.HttpUtility.ParseQueryString(TokenBody ?? "")[name];
+        }
+
+        private static ProviderUnderTest Create(string kind, Recorder recorder, ILogger? logger = null)
+            => new(kind, new HttpClient(recorder.Handler()), logger ?? NullLogger);
+
+        /// <summary>Thin wrapper so one test body can drive all four provider classes.</summary>
+        private sealed class ProviderUnderTest
+        {
+            private readonly Func<Dictionary<string, string>, Dictionary<string, string>, string> _getPassword;
+
+            public ProviderUnderTest(string kind, HttpClient client, ILogger logger)
+            {
+                switch (kind)
+                {
+                    case "generic":
+                    case "generic-cc":
+                        _getPassword = new SecretServerPam(client, logger).GetPassword;
+                        break;
+                    case "password":
+                        _getPassword = new SecretServerPamPassword(client, logger).GetPassword;
+                        break;
+                    case "clientcredentials":
+                        _getPassword = new SecretServerPamClientCredentials(client, logger).GetPassword;
+                        break;
+                    case "windows":
+                        _getPassword = new SecretServerPamWindows(client, logger).GetPassword;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+                }
+            }
+
+            public string GetPassword(Dictionary<string, string> instance, Dictionary<string, string> server)
+                => _getPassword(instance, server);
+        }
+
+        private static Dictionary<string, string> InstanceParams() => new()
+        {
+            { "SecretId", FakeSecretId },
+            { "SecretFieldName", FakeFieldName }
+        };
+
+        /// <summary>Server parameters for a provider kind with every parameter supplied except Host.</summary>
+        private static Dictionary<string, string> ParamsWithoutHost(string kind) => kind switch
+        {
+            "generic" => new() { { "Username", FakeUsername }, { "Password", FakePassword } },
+            "password" => new() { { "Username", FakeUsername }, { "Password", FakePassword } },
+            "generic-cc" => new()
+            {
+                { "GrantType", "client_credentials" }, { "ClientId", FakeClientId }, { "ClientSecret", FakeClientSecret }
+            },
+            "clientcredentials" => new() { { "ClientId", FakeClientId }, { "ClientSecret", FakeClientSecret } },
+            "windows" => new(),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+
+        private static void Set(Dictionary<string, string> dict, string key, string? form)
+        {
+            if (form == null) dict.Remove(key);
+            else dict[key] = form;
+        }
+
+        private static void Env(string name, string? value) => Environment.SetEnvironmentVariable(name, value);
+
+        private static void SetAllEnv()
+        {
+            Env(EnvHost, EnvHostValue);
+            Env(EnvUsername, EnvUsernameValue);
+            Env(EnvPassword, EnvPasswordValue);
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+        }
+
+        // -----------------------------------------------------------------------
+        // Host
+        // -----------------------------------------------------------------------
+
+        [Theory]
+        [MemberData(nameof(KindsByAbsentForm))]
+        public void Host_FillsMissingEmptyOrNaParameter_ForEveryType(string kind, string? form)
+        {
+            Env(EnvHost, EnvHostValue);
+            var recorder = new Recorder();
+            var server = ParamsWithoutHost(kind);
+            Set(server, "Host", form);
+
+            var result = Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            result.Should().Be(FakeFieldValue);
+            recorder.Uris.Should().OnlyContain(u => u.Host == CapturedHostSegment);
+        }
+
+        [Theory]
+        [InlineData("generic")]
+        [InlineData("password")]
+        [InlineData("clientcredentials")]
+        [InlineData("windows")]
+        public void Host_ConfiguredParameterWinsOverEnvironment(string kind)
+        {
+            Env(EnvHost, EnvHostValue);
+            var recorder = new Recorder();
+            var server = ParamsWithoutHost(kind);
+            server["Host"] = FakeHost;
+
+            Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            recorder.Uris.Should().OnlyContain(u => u.Host == "secretserver.example.com");
+        }
+
+        // -----------------------------------------------------------------------
+        // GrantType (generic Delinea-SecretServer type only)
+        // -----------------------------------------------------------------------
+
+        [Theory]
+        [MemberData(nameof(AbsentForms))]
+        public void GrantType_Windows_FillsAbsentParameter_OnGenericType(string? form)
+        {
+            Env(EnvGrantType, "windows");
+            var recorder = new Recorder();
+            var server = new Dictionary<string, string> { { "Host", FakeHost } };
+            Set(server, "GrantType", form);
+
+            Create("generic", recorder).GetPassword(InstanceParams(), server);
+
+            recorder.TokenRequested.Should().BeFalse("windows grant needs no token");
+            recorder.SecretUri.AbsolutePath.Should().Contain("winauthwebservices");
+        }
+
+        [Theory]
+        [MemberData(nameof(AbsentForms))]
+        public void GrantType_ClientCredentials_FillsAbsentParameter_AndCredentialsFollowTheGrant(string? form)
+        {
+            Env(EnvGrantType, "client_credentials");
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+            var recorder = new Recorder();
+            var server = new Dictionary<string, string> { { "Host", FakeHost } };
+            Set(server, "GrantType", form);
+
+            Create("generic", recorder).GetPassword(InstanceParams(), server);
+
+            recorder.TokenField("username").Should().Be(EnvClientIdValue);
+            recorder.TokenField("password").Should().Be(EnvClientSecretValue);
+            recorder.TokenField("grant_type").Should().Be("password", "Delinea API constraint");
+        }
+
+        [Fact]
+        public void GrantType_ConfiguredParameterWinsOverEnvironment_OnGenericType()
+        {
+            SetAllEnv();
+            Env(EnvGrantType, "windows");
+            var recorder = new Recorder();
+
+            Create("generic", recorder).GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost }, { "GrantType", "password" }, { "Username", FakeUsername },
+                { "Password", FakePassword }
+            });
+
+            recorder.TokenRequested.Should().BeTrue("the configured password grant must win over the windows env value");
+            recorder.TokenField("username").Should().Be(FakeUsername);
+        }
+
+        [Fact]
+        public void GrantType_InvalidEnvironmentValue_IsRejectedByValidation()
+        {
+            Env(EnvGrantType, "bogus");
+            var sut = Create("generic", new Recorder());
+
+            var act = () => sut.GetPassword(InstanceParams(), new Dictionary<string, string> { { "Host", FakeHost } });
+
+            act.Should().Throw<InvalidClientConfigurationException>().WithMessage("*bogus*");
+        }
+
+        [Theory]
+        [InlineData("password", "windows")]
+        [InlineData("clientcredentials", "windows")]
+        [InlineData("windows", "password")]
+        [InlineData("windows", "client_credentials")]
+        public void GrantType_TypeSpecificClassesIgnoreEnvironment(string kind, string envGrant)
+        {
+            Env(EnvGrantType, envGrant);
+            var recorder = new Recorder();
+            var server = ParamsWithoutHost(kind);
+            server["Host"] = FakeHost;
+
+            Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            if (kind == "windows")
+                recorder.TokenRequested.Should().BeFalse();
+            else
+                recorder.TokenRequested.Should().BeTrue();
+        }
+
+        // -----------------------------------------------------------------------
+        // Credentials for the resolved grant type
+        // -----------------------------------------------------------------------
+
+        [Theory]
+        [MemberData(nameof(PasswordGrantKindsByAbsentForm))]
+        public void UsernameAndPassword_FillAbsentParameters_ForPasswordGrant(string kind, string? form)
+        {
+            Env(EnvUsername, EnvUsernameValue);
+            Env(EnvPassword, EnvPasswordValue);
+            var recorder = new Recorder();
+            var server = new Dictionary<string, string> { { "Host", FakeHost } };
+            Set(server, "Username", form);
+            Set(server, "Password", form);
+
+            Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            recorder.TokenField("username").Should().Be(EnvUsernameValue);
+            recorder.TokenField("password").Should().Be(EnvPasswordValue, "env values are used verbatim, untrimmed");
+        }
+
+        [Theory]
+        [MemberData(nameof(ClientCredentialsGrantKindsByAbsentForm))]
+        public void ClientIdAndSecret_FillAbsentParameters_ForClientCredentialsGrant(string kind, string? form)
+        {
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+            var recorder = new Recorder();
+            var server = new Dictionary<string, string> { { "Host", FakeHost } };
+            if (kind == "generic-cc") server["GrantType"] = "client_credentials";
+            Set(server, "ClientId", form);
+            Set(server, "ClientSecret", form);
+
+            Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            recorder.TokenField("username").Should().Be(EnvClientIdValue);
+            recorder.TokenField("password").Should().Be(EnvClientSecretValue);
+        }
+
+        [Theory]
+        [InlineData("generic")]
+        [InlineData("password")]
+        public void Credentials_ConfiguredParametersWinOverEnvironment_ForPasswordGrant(string kind)
+        {
+            SetAllEnv();
+            var recorder = new Recorder();
+
+            Create(kind, recorder).GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", FakePassword }
+            });
+
+            recorder.TokenField("username").Should().Be(FakeUsername);
+            recorder.TokenField("password").Should().Be(FakePassword);
+        }
+
+        [Theory]
+        [InlineData("generic-cc")]
+        [InlineData("clientcredentials")]
+        public void Credentials_ConfiguredParametersWinOverEnvironment_ForClientCredentialsGrant(string kind)
+        {
+            SetAllEnv();
+            var recorder = new Recorder();
+            var server = ParamsWithoutHost(kind);
+            server["Host"] = FakeHost;
+
+            Create(kind, recorder).GetPassword(InstanceParams(), server);
+
+            recorder.TokenField("username").Should().Be(FakeClientId);
+            recorder.TokenField("password").Should().Be(FakeClientSecret);
+        }
+
+        [Fact]
+        public void Credentials_PartialOverride_FillsOnlyTheMissingParameter()
+        {
+            Env(EnvPassword, EnvPasswordValue);
+            var recorder = new Recorder();
+
+            Create("password", recorder).GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", "N/A" }
+            });
+
+            recorder.TokenField("username").Should().Be(FakeUsername);
+            recorder.TokenField("password").Should().Be(EnvPasswordValue);
+        }
+
+        [Theory]
+        [InlineData("generic", "windows")]
+        [InlineData("windows", null)]
+        public void WindowsGrant_NeverReadsUsernameOrPasswordVariables(string kind, string? grantParam)
+        {
+            Env(EnvUsername, EnvUsernameValue);
+            Env(EnvPassword, EnvPasswordValue);
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+            var recorder = new Recorder();
+            var logger = new CapturingLogger();
+            var server = new Dictionary<string, string> { { "Host", FakeHost } };
+            if (grantParam != null) server["GrantType"] = grantParam;
+
+            Create(kind, recorder, logger).GetPassword(InstanceParams(), server);
+
+            recorder.TokenRequested.Should().BeFalse();
+            logger.Entries.Should().NotContain(e =>
+                e.Message.Contains(EnvUsername) || e.Message.Contains(EnvPassword) ||
+                e.Message.Contains(EnvClientId) || e.Message.Contains(EnvClientSecret),
+                "the windows grant must not even look at credential variables");
+        }
+
+        [Fact]
+        public void Credentials_AreNotMixedAcrossGrantTypes()
+        {
+            // Only the client_credentials variables are set; a password-grant provider must not use them.
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+            var sut = Create("password", new Recorder());
+
+            var act = () => sut.GetPassword(InstanceParams(), new Dictionary<string, string> { { "Host", FakeHost } });
+
+            act.Should().Throw<InvalidClientConfigurationException>().WithMessage($"*{EnvUsername}*");
+        }
+
+        // -----------------------------------------------------------------------
+        // No fallback for instance parameters
+        // -----------------------------------------------------------------------
+
+        [Theory]
+        [InlineData("KEYFACTOR_PAM_DELINEA_SECRET_ID")]
+        [InlineData("KEYFACTOR_PAM_DELINEA_SECRETID")]
+        public void SecretId_HasNoEnvironmentFallback(string variable)
+        {
+            Env(variable, FakeSecretId);
+            SetAllEnv();
+            var sut = Create("password", new Recorder());
+
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretFieldName", FakeFieldName } },
+                new Dictionary<string, string> { { "Host", FakeHost } });
+
+            act.Should().Throw<InvalidSecretConfigurationException>().WithMessage("*SecretId*");
+        }
+
+        [Theory]
+        [InlineData("KEYFACTOR_PAM_DELINEA_SECRET_FIELD_NAME")]
+        [InlineData("KEYFACTOR_PAM_DELINEA_SECRETFIELDNAME")]
+        public void SecretFieldName_HasNoEnvironmentFallback(string variable)
+        {
+            Env(variable, FakeFieldName);
+            SetAllEnv();
+            var sut = Create("password", new Recorder());
+
+            var act = () => sut.GetPassword(
+                new Dictionary<string, string> { { "SecretId", FakeSecretId } },
+                new Dictionary<string, string> { { "Host", FakeHost } });
+
+            act.Should().Throw<InvalidSecretConfigurationException>().WithMessage("*SecretFieldName*");
+        }
+
+        // -----------------------------------------------------------------------
+        // Error messages
+        // -----------------------------------------------------------------------
+
+        [Fact]
+        public void MissingHost_ErrorNamesBothSources()
+        {
+            var sut = Create("windows", new Recorder());
+
+            var act = () => sut.GetPassword(InstanceParams(), new Dictionary<string, string>());
+
+            act.Should().Throw<InvalidClientConfigurationException>()
+                .WithMessage("*'Host'*not provided*KEYFACTOR_PAM_DELINEA_HOST*");
+        }
+
+        [Theory]
+        [InlineData("password", "Username", EnvUsername)]
+        [InlineData("password", "Password", EnvPassword)]
+        [InlineData("clientcredentials", "ClientId", EnvClientId)]
+        [InlineData("clientcredentials", "ClientSecret", EnvClientSecret)]
+        public void MissingCredential_ErrorNamesBothSources(string kind, string parameter, string envVar)
+        {
+            var server = ParamsWithoutHost(kind);
+            server["Host"] = FakeHost;
+            server.Remove(parameter);
+            var sut = Create(kind, new Recorder());
+
+            var act = () => sut.GetPassword(InstanceParams(), server);
+
+            act.Should().Throw<InvalidClientConfigurationException>()
+                .WithMessage($"*'{parameter}'*{envVar}*");
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("N/A")]
+        [InlineData(" n/a ")]
+        public void EmptyOrNaEnvironmentValue_CountsAsUnset_AndErrorNamesTheVariable(string envValue)
+        {
+            Env(EnvHost, envValue);
+            Env(EnvPassword, envValue);
+            var sut = Create("password", new Recorder());
+
+            var hostAct = () => sut.GetPassword(InstanceParams(), new Dictionary<string, string>
+                { { "Username", FakeUsername }, { "Password", FakePassword } });
+            var passwordAct = () => sut.GetPassword(InstanceParams(), new Dictionary<string, string>
+                { { "Host", FakeHost }, { "Username", FakeUsername } });
+
+            hostAct.Should().Throw<InvalidClientConfigurationException>().WithMessage($"*{EnvHost}*");
+            passwordAct.Should().Throw<InvalidClientConfigurationException>().WithMessage($"*{EnvPassword}*");
+        }
+
+        // -----------------------------------------------------------------------
+        // Logging
+        // -----------------------------------------------------------------------
+
+        [Fact]
+        public void InvocationLog_ShowsEffectiveHostAndGrantType_AndNoDefaultingWarning()
+        {
+            Env(EnvHost, EnvHostValue);
+            Env(EnvGrantType, "client_credentials");
+            Env(EnvClientId, EnvClientIdValue);
+            Env(EnvClientSecret, EnvClientSecretValue);
+            var logger = new CapturingLogger();
+
+            Create("generic", new Recorder(), logger)
+                .GetPassword(InstanceParams(), new Dictionary<string, string>());
+
+            var invoked = logger.Entries.Single(e => e.Message.StartsWith("GetPassword invoked"));
+            invoked.Message.Should().Contain($"TargetUrl={EnvHostValue}");
+            invoked.Message.Should().Contain("GrantType=client_credentials");
+            logger.Entries.Should().NotContain(e => e.Level == LogLevel.Warning && e.Message.Contains("defaulting"));
+        }
+
+        [Fact]
+        public void Logs_NameTheSourceOfEachValue_AndNeverTheSecrets()
+        {
+            SetAllEnv();
+            var logger = new CapturingLogger();
+
+            Create("password", new Recorder(), logger).GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost }, { "Username", "N/A" }, { "Password", "" }
+            });
+
+            var debug = logger.Entries.Where(e => e.Level == LogLevel.Debug).Select(e => e.Message).ToList();
+            debug.Should().Contain(m => m.Contains("'Host'") && m.Contains("PAM parameter"));
+            debug.Should().Contain(m => m.Contains("'Username'") && m.Contains(EnvUsername));
+            debug.Should().Contain(m => m.Contains("'Password'") && m.Contains(EnvPassword));
+
+            var all = string.Join("\n", logger.Entries.Select(e => e.Message));
+            all.Should().NotContain(EnvPasswordValue.Trim(), "environment secret values must never be logged");
+            all.Should().NotContain(EnvClientSecretValue);
+        }
+
+        [Fact]
+        public void NoEnvironmentVariables_StillWarnsWhenGrantTypeDefaults()
+        {
+            var logger = new CapturingLogger();
+
+            Create("generic", new Recorder(), logger).GetPassword(InstanceParams(), new Dictionary<string, string>
+            {
+                { "Host", FakeHost }, { "Username", FakeUsername }, { "Password", FakePassword }
+            });
+
+            logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Message.Contains("defaulting"));
+        }
+    }
+
+    // ---------------------------------------------------------------------------
     // Integration tests — skipped automatically when env vars are not set
     // ---------------------------------------------------------------------------
 
-    public class IntegrationTests
+    [Collection(ProviderEnvironmentCollection.Name)]
+    public class IntegrationTests : ProviderEnvironmentTestBase
     {
         private static string Env(string name) => Environment.GetEnvironmentVariable(name)!;
         private static bool SkipTls =>
