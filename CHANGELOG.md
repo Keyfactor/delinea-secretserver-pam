@@ -12,6 +12,7 @@
 ## Documentation
 
 - `(docs)` Document the environment variables, the precedence rule, the `N/A` tip for the Command UI, and the security considerations: machine-scope variables are readable by other local users, the process environment is readable by administrators and in crash dumps, one set of variables applies to every Delinea PAM provider in the process, and changes need a process restart.
+- `(docs)` Correct the TLS Validation section: `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` does not override `SkipTlsValidation`. Validation is skipped if either source enables it, and `false` in one source does not override `true` in the other. The code has always behaved this way; only the documentation was wrong.
 
 ## Tests
 
