@@ -44,6 +44,49 @@ The environment variable takes precedence and overrides the configuration parame
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
 
+## Environment Variables
+
+Server parameters can also be supplied through environment variables on the host that runs the provider (the
+Keyfactor Command web application or the Universal Orchestrator service). The variables are a **fallback only**: a
+PAM parameter that has a value always wins. A variable is used only when the corresponding parameter is missing,
+empty, or `N/A` (case-insensitive). A variable whose own value is empty or `N/A` counts as not set. Values are used
+exactly as written, with no trimming, because passwords can contain whitespace.
+
+| Variable | Fills parameter | Applies to |
+| --- | --- | --- |
+| `KEYFACTOR_PAM_DELINEA_HOST` | `Host` | All PAM types |
+| `KEYFACTOR_PAM_DELINEA_GRANT_TYPE` | `GrantType` | `Delinea-SecretServer` only |
+| `KEYFACTOR_PAM_DELINEA_USERNAME` | `Username` | `password` grant |
+| `KEYFACTOR_PAM_DELINEA_PASSWORD` | `Password` | `password` grant |
+| `KEYFACTOR_PAM_DELINEA_CLIENT_ID` | `ClientId` | `client_credentials` grant |
+| `KEYFACTOR_PAM_DELINEA_CLIENT_SECRET` | `ClientSecret` | `client_credentials` grant |
+
+- Host and grant type are filled first. The credential variables are then read only for the grant type that is in
+  effect, so the `windows` grant never reads the username, password, client ID, or client secret variables.
+- The type-specific PAM types (`Delinea-SecretServer-Password`, `Delinea-SecretServer-ClientCredentials`,
+  `Delinea-SecretServer-Windows`) have a fixed grant type and ignore `KEYFACTOR_PAM_DELINEA_GRANT_TYPE`.
+- `SecretId` and `SecretFieldName` have no environment fallback. They always come from the PAM instance, because a
+  host-wide default would silently return the wrong credential.
+- `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` is unchanged (see [TLS Validation](#tls-validation)).
+- If a required parameter is still missing after the fallback, the error message names both the parameter and its
+  environment variable. The debug log records which source (PAM parameter or environment variable name) supplied each
+  value, never the value itself.
+
+> [!TIP]
+> In the Keyfactor Command UI every declared field must have a value. Enter `N/A` for a parameter you want to take
+> from the environment (see [Dummy Values](#dummy-values)).
+
+> [!WARNING]
+> - Environment variables are readable more widely than a PAM parameter. On Windows, machine-scope variables can be
+>   read by any local user, and the process environment can be read by administrators and appears in crash dumps.
+>   Prefer process- or service-scoped variables (for example a systemd `Environment=` drop-in file with `0600`
+>   permissions, or an IIS application pool environment variable) over machine-wide ones. Where possible, keep secrets
+>   in a PAM parameter instead.
+> - One set of variables applies to **every** Delinea PAM provider in the process. On a Command server that means every
+>   Delinea PAM provider defined in Command that is missing the parameter, not only one.
+> - Changes to environment variables take effect only after the Command application pool or the Universal Orchestrator
+>   service is restarted.
+
 ## Registration and Naming
 
 > [!IMPORTANT]

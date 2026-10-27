@@ -67,6 +67,22 @@ of the process running Keyfactor Command or the Universal Orchestrator.
 > [!IMPORTANT]
 > A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4), so only one of the manifest files can be installed as `manifest.json` on a given orchestrator. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
 
+## Environment Variables
+
+The `Host` server parameter, if left empty (or set to `N/A`), can be supplied from an environment variable on the host
+that runs the provider. A configured parameter always wins over the environment.
+
+| Variable | Fills parameter |
+| --- | --- |
+| `KEYFACTOR_PAM_DELINEA_HOST` | `Host` |
+
+This type never reads the username, password, client ID, or client secret variables, and it ignores
+`KEYFACTOR_PAM_DELINEA_GRANT_TYPE`: it always uses Integrated Windows Authentication.
+
+See the Environment Variables section of the README for the precedence rules and the security
+considerations. Set the variables for the process or service, not machine-wide, and restart the Command
+application pool or the Universal Orchestrator service after changing them.
+
 ## Registration and Naming
 
 The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-Windows`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.

@@ -1,3 +1,22 @@
+# v1.4.0
+
+## Features
+
+- `(config)` Server parameters can now be supplied through environment variables, as a fallback only: a configured PAM parameter always wins, and a variable is used only when the parameter is missing, empty, or `N/A`. New variables: `KEYFACTOR_PAM_DELINEA_HOST` (`Host`, all PAM types), `KEYFACTOR_PAM_DELINEA_GRANT_TYPE` (`GrantType`, generic `Delinea-SecretServer` type only), `KEYFACTOR_PAM_DELINEA_USERNAME` / `KEYFACTOR_PAM_DELINEA_PASSWORD` (`password` grant) and `KEYFACTOR_PAM_DELINEA_CLIENT_ID` / `KEYFACTOR_PAM_DELINEA_CLIENT_SECRET` (`client_credentials` grant). Credential variables are read only for the grant type in effect, so the `windows` grant never reads them, and the type-specific PAM types ignore the grant type variable. `SecretId` and `SecretFieldName` have no environment fallback. `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` is unchanged.
+
+## Improvements
+
+- `(errors)` When a required server parameter is missing, the error message now also names the environment variable that could supply it, for example `Server configuration parameter 'Host' not provided (environment variable KEYFACTOR_PAM_DELINEA_HOST not set)`. The exception types are unchanged.
+- `(logging)` At debug level the provider records which source (PAM parameter or environment variable name) supplied each server parameter. Values are never logged. The `GetPassword invoked` record now shows the effective host and grant type.
+
+## Documentation
+
+- `(docs)` Document the environment variables, the precedence rule, the `N/A` tip for the Command UI, and the security considerations: machine-scope variables are readable by other local users, the process environment is readable by administrators and in crash dumps, one set of variables applies to every Delinea PAM provider in the process, and changes need a process restart.
+
+## Tests
+
+- `(tests)` Cover the environment fallback for every PAM type and each variable (missing, empty and `N/A` parameters), parameter-over-environment precedence, the `windows` grant ignoring credential variables, type-specific classes ignoring the grant type variable, no fallback for `SecretId` and `SecretFieldName`, empty and `N/A` variables counting as unset, error messages, and log content (source named, secrets never logged). All provider tests now run in one non-parallel collection and clear `KEYFACTOR_PAM_DELINEA_*` before each test, so results no longer depend on the developer shell or on parallel test classes.
+
 # v1.3.1
 
 ## Breaking Changes
