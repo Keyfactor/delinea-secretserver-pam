@@ -1,8 +1,9 @@
 ## Delinea-SecretServer-Windows
 
 The `Delinea-SecretServer-Windows` PAM type authenticates to Delinea Secret Server using Integrated Windows
-Authentication (IWA). No credentials are required in the configuration — the provider uses the Windows identity
-of the process running Keyfactor Command or the Universal Orchestrator.
+Authentication (IWA). No credentials are required in the configuration; the provider uses the Windows identity
+of the process running Keyfactor Command or the Universal Orchestrator. No access token is requested; the secret is
+retrieved from the `/winauthwebservices/api/v1/secrets/{id}` endpoint.
 
 > [!IMPORTANT]
 > Integrated Windows Authentication is not supported on Delinea Secret Server Cloud. This type is only compatible
@@ -10,20 +11,25 @@ of the process running Keyfactor Command or the Universal Orchestrator.
 
 ## Requirements
 
+> [!IMPORTANT]
+> Integrated Windows Authentication is not supported on Delinea Secret Server Cloud. This type is only compatible
+> with on-premises Secret Server installations.
+
 - On-premises Delinea Secret Server instance accessible from the host running Keyfactor Command or the Universal Orchestrator.
 - The Windows service account running Keyfactor Command or the Universal Orchestrator must have permission to view
   the secrets being retrieved. See the
   [Delinea Secret Server IWA documentation](https://docs.delinea.com/online-help/secret-server/authentication/iwa-webservices/webservice-iwa-powershell/index.htm)
   for information on configuring IWA access.
 - The Secret Server instance must be configured to allow Integrated Windows Authentication web service access.
+- The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
-## Provider Registration Snippets
+## Delinea-SecretServer-Windows Registration Snippets
 
 Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
 
 This type always uses Integrated Windows Authentication. A `GrantType` value is not needed and is ignored.
 
-### Universal Orchestrator
+### Windows: Universal Orchestrator manifest
 
 The release ships this registration as `Windows-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and this `InitializationInfo` section:
 
@@ -43,11 +49,10 @@ The release ships this registration as `Windows-manifest.json`; rename it to `ma
 }
 ```
 
-### Keyfactor Command host (Command 10 `web.config`)
+### Windows: Command 10 `web.config` registration
 
 ```xml
 <register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows, delinea-secretserver-pam" name="Delinea-SecretServer-Windows" />
 ```
 
 The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
-
