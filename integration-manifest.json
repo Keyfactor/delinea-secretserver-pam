@@ -8,7 +8,7 @@
   "update_catalog": true,
   "release_dir": "delinea-secretserver-pam/bin/Release",
   "release_project": "delinea-secretserver-pam/delinea-secretserver-pam.csproj",
-  "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
+  "description": "The Delinea Secret Server PAM Provider retrieves stored account credentials from a Delinea Secret Server secret. It supports password, OAuth2 client credentials, and Windows (Integrated Windows Authentication) authentication; the credentials required depend on the PAM type and grant type chosen.",
   "about": {
     "pam": {
       "providerName": "Delinea Secret Server PAM Provider",
@@ -58,6 +58,13 @@
               "Name": "GrantType",
               "DisplayName": "Grant Type",
               "Description": "The grant type used to authenticate to the Secret Server instance. Valid values are `password`, `client_credentials`, or `windows`. Default is `password`. If not provided the default value `password` will be used to maintain backwards compatibility.",
+              "DataType": 1,
+              "InstanceLevel": false
+            },
+            {
+              "Name": "SkipTlsValidation",
+              "DisplayName": "Skip TLS Validation",
+              "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
               "DataType": 1,
               "InstanceLevel": false
             },
