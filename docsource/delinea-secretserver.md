@@ -87,7 +87,7 @@ expose the fields relevant to their authentication flow.
 
 ## Delinea-SecretServer Registration Snippets
 
-Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
+Shared registration and naming rules are described in [Registration and Naming](/README.md#registration-and-naming).
 
 This generic type selects its authentication flow from `GrantType` and defaults to `password` when it is not supplied. For new installations prefer the type-specific PAM types.
 

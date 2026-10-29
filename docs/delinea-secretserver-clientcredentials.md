@@ -91,7 +91,7 @@ application accounts to authenticate.
 
 ## Delinea-SecretServer-ClientCredentials Registration Snippets
 
-Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
+Shared registration and naming rules are described in [Registration and Naming](/README.md#registration-and-naming).
 
 This type always uses the `client_credentials` flow. A `GrantType` value is not needed and is ignored. If the type-specific class is not the one registered in `manifest.json`, the Universal Orchestrator loads the generic provider, which defaults to `password`.
 

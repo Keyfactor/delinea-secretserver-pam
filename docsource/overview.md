@@ -46,7 +46,7 @@ sequenceDiagram
     SecretServer->>UO: Here's your API token.
     UO->>SecretServer: I need secret ID 100, here's my API token.
     SecretServer->>SecretServer: Check secret ACL.
-    SecretServer->>UO: This is allowed, here's the secret. 
+    SecretServer->>UO: This is allowed, here's the secret.
     UO->>UO: Running job.
     UO->>KeyfactorCommand: Job completed.
 ```

@@ -88,7 +88,7 @@ retrieved from the `/winauthwebservices/api/v1/secrets/{id}` endpoint.
 
 ## Delinea-SecretServer-Windows Registration Snippets
 
-Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
+Shared registration and naming rules are described in [Registration and Naming](/README.md#registration-and-naming).
 
 This type always uses Integrated Windows Authentication. A `GrantType` value is not needed and is ignored.
 

@@ -78,7 +78,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -125,7 +125,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -172,7 +172,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -205,7 +205,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }

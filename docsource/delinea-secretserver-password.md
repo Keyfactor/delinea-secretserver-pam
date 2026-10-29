@@ -77,7 +77,7 @@ and password is used.
 
 ## Delinea-SecretServer-Password Registration Snippets
 
-Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
+Shared registration and naming rules are described in [Registration and Naming](/README.md#registration-and-naming).
 
 This type always uses the `password` grant. A `GrantType` value is not needed and is ignored.
 
