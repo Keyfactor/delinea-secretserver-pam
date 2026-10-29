@@ -37,12 +37,88 @@ value. The provider treats `N/A` (case-insensitive) as equivalent to an empty va
 All PAM types support skipping TLS certificate validation for non-production environments via either:
 
 - The `SkipTlsValidation` configuration parameter (set to `true` in the PAM provider instance)
-- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host)
+- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host that runs the provider)
 
-The environment variable takes precedence and overrides the configuration parameter.
+Validation is skipped if either source enables it. A value of `false` in one source does not override a `true` in the other.
 
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
+
+## Environment Variables
+
+The provider reads one environment variable: `KEYFACTOR_PAM_SKIP_TLS_VALIDATION`. It works the same way for all four PAM
+types and every grant type.
+
+| Variable | Accepted Values | Default | Effect | Read By |
+| --- | --- | --- | --- | --- |
+| `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` | `true` (any letter case) or `1`. Other values have no effect. | Unset (TLS validation enforced) | Skips TLS certificate validation for every Delinea PAM provider in the process. Combines with `SkipTlsValidation`: either source can enable skipping. | Keyfactor Command web application or Universal Orchestrator service |
+
+### KEYFACTOR_PAM_SKIP_TLS_VALIDATION
+
+- **Accepted values:** `true` (any letter case) or `1`. Other values have no effect.
+- **Effect:** Skips TLS certificate validation for every Delinea PAM provider that runs in the same process. For how it
+  combines with `SkipTlsValidation`, see [TLS Validation](#tls-validation).
+- **Read by:** The process that runs the provider. For Command-hosted providers, that is the Keyfactor Command web
+  application. For Universal Orchestrator providers, it is the Universal Orchestrator service. Changes don't reach a
+  running process, so restart it after you set the variable.
+
+### Configuration by PAM Type
+
+The table lists the server parameters each type takes. In Keyfactor Command, the server parameters are set on the PAM provider
+instance. The Universal Orchestrator column lists the keys in the `InitializationInfo` section of the type's shipped
+manifest. The shipped manifests don't include `SkipTlsValidation`.
+
+| PAM Type | Grant Type | Keyfactor Command Server Parameters | Universal Orchestrator `InitializationInfo` Keys |
+| --- | --- | --- | --- |
+| `Delinea-SecretServer-Password` | `password` | `Host`, `Username`, `Password`, `SkipTlsValidation` | `Host`, `Username`, `Password` |
+| `Delinea-SecretServer-ClientCredentials` | `client_credentials` | `Host`, `ClientId`, `ClientSecret`, `SkipTlsValidation` | `Host`, `ClientId`, `ClientSecret` |
+| `Delinea-SecretServer-Windows` | `windows` | `Host`, `SkipTlsValidation` | `Host` |
+| `Delinea-SecretServer` | Set by `GrantType` (default `password`) | `Host`, `Username`, `Password`, `ClientId`, `ClientSecret`, `GrantType`, `SkipTlsValidation` | `Host`, `Username`, `Password`, `ClientId`, `ClientSecret`, `GrantType` |
+
+`KEYFACTOR_PAM_SKIP_TLS_VALIDATION` applies to every row in the same way.
+
+### Examples
+
+Set the variable for a Universal Orchestrator on Windows. Run PowerShell as Administrator, then restart the service:
+
+```powershell
+[Environment]::SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", "true", "Machine")
+Restart-Service -Name "<Universal Orchestrator service name>"
+```
+
+Set the variable for a Universal Orchestrator on Linux that runs as a systemd service. Add it to a service override, then
+restart the service:
+
+```shell
+sudo systemctl edit <Universal Orchestrator service name>
+```
+
+In the editor, add:
+
+```ini
+[Service]
+Environment="KEYFACTOR_PAM_SKIP_TLS_VALIDATION=true"
+```
+
+```shell
+sudo systemctl restart <Universal Orchestrator service name>
+```
+
+Set the variable for Keyfactor Command on Windows, then restart IIS so the Command web application picks it up:
+
+```powershell
+[Environment]::SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", "true", "Machine")
+iisreset
+```
+
+To turn validation back on, remove the variable, set `SkipTlsValidation` to `false` or remove it, and restart the
+process.
+
+When validation is skipped, the provider logs this warning on each retrieval, whichever source enabled it:
+
+```text
+TLS certificate validation is disabled — use only in non-production environments
+```
 
 ## Registration and Naming
 

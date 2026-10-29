@@ -68,12 +68,88 @@ value. The provider treats `N/A` (case-insensitive) as equivalent to an empty va
 All PAM types support skipping TLS certificate validation for non-production environments via either:
 
 - The `SkipTlsValidation` configuration parameter (set to `true` in the PAM provider instance)
-- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host)
+- The `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` environment variable (set to `true` or `1` on the host that runs the provider)
 
-The environment variable takes precedence and overrides the configuration parameter.
+Validation is skipped if either source enables it. A value of `false` in one source does not override a `true` in the other.
 
 > [!WARNING]
 > Disabling TLS validation should only be used in non-production environments.
+
+## Environment Variables
+
+The provider reads one environment variable: `KEYFACTOR_PAM_SKIP_TLS_VALIDATION`. It works the same way for all four PAM
+types and every grant type.
+
+| Variable | Accepted Values | Default | Effect | Read By |
+| --- | --- | --- | --- | --- |
+| `KEYFACTOR_PAM_SKIP_TLS_VALIDATION` | `true` (any letter case) or `1`. Other values have no effect. | Unset (TLS validation enforced) | Skips TLS certificate validation for every Delinea PAM provider in the process. Combines with `SkipTlsValidation`: either source can enable skipping. | Keyfactor Command web application or Universal Orchestrator service |
+
+### KEYFACTOR_PAM_SKIP_TLS_VALIDATION
+
+- **Accepted values:** `true` (any letter case) or `1`. Other values have no effect.
+- **Effect:** Skips TLS certificate validation for every Delinea PAM provider that runs in the same process. For how it
+  combines with `SkipTlsValidation`, see [TLS Validation](#tls-validation).
+- **Read by:** The process that runs the provider. For Command-hosted providers, that is the Keyfactor Command web
+  application. For Universal Orchestrator providers, it is the Universal Orchestrator service. Changes don't reach a
+  running process, so restart it after you set the variable.
+
+### Configuration by PAM Type
+
+The table lists the server parameters each type takes. In Keyfactor Command, the server parameters are set on the PAM provider
+instance. The Universal Orchestrator column lists the keys in the `InitializationInfo` section of the type's shipped
+manifest. The shipped manifests don't include `SkipTlsValidation`.
+
+| PAM Type | Grant Type | Keyfactor Command Server Parameters | Universal Orchestrator `InitializationInfo` Keys |
+| --- | --- | --- | --- |
+| `Delinea-SecretServer-Password` | `password` | `Host`, `Username`, `Password`, `SkipTlsValidation` | `Host`, `Username`, `Password` |
+| `Delinea-SecretServer-ClientCredentials` | `client_credentials` | `Host`, `ClientId`, `ClientSecret`, `SkipTlsValidation` | `Host`, `ClientId`, `ClientSecret` |
+| `Delinea-SecretServer-Windows` | `windows` | `Host`, `SkipTlsValidation` | `Host` |
+| `Delinea-SecretServer` | Set by `GrantType` (default `password`) | `Host`, `Username`, `Password`, `ClientId`, `ClientSecret`, `GrantType`, `SkipTlsValidation` | `Host`, `Username`, `Password`, `ClientId`, `ClientSecret`, `GrantType` |
+
+`KEYFACTOR_PAM_SKIP_TLS_VALIDATION` applies to every row in the same way.
+
+### Examples
+
+Set the variable for a Universal Orchestrator on Windows. Run PowerShell as Administrator, then restart the service:
+
+```powershell
+[Environment]::SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", "true", "Machine")
+Restart-Service -Name "<Universal Orchestrator service name>"
+```
+
+Set the variable for a Universal Orchestrator on Linux that runs as a systemd service. Add it to a service override, then
+restart the service:
+
+```shell
+sudo systemctl edit <Universal Orchestrator service name>
+```
+
+In the editor, add:
+
+```ini
+[Service]
+Environment="KEYFACTOR_PAM_SKIP_TLS_VALIDATION=true"
+```
+
+```shell
+sudo systemctl restart <Universal Orchestrator service name>
+```
+
+Set the variable for Keyfactor Command on Windows, then restart IIS so the Command web application picks it up:
+
+```powershell
+[Environment]::SetEnvironmentVariable("KEYFACTOR_PAM_SKIP_TLS_VALIDATION", "true", "Machine")
+iisreset
+```
+
+To turn validation back on, remove the variable, set `SkipTlsValidation` to `false` or remove it, and restart the
+process.
+
+When validation is skipped, the provider logs this warning on each retrieval, whichever source enabled it:
+
+```text
+TLS certificate validation is disabled — use only in non-production environments
+```
 
 ## Registration and Naming
 
@@ -970,6 +1046,49 @@ When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and
 
 > [!NOTE]
 > Additional information on Delinea-SecretServer can be found in the [supplemental documentation](docs/delinea-secretserver.md).
+
+## Registration and Naming
+
+The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.
+
+This generic type selects its authentication flow from `GrantType` and defaults to `password` when it is not supplied. For new installations prefer the type-specific PAM types.
+
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4). The shipped `manifest.json` registers this generic type. To use a type-specific provider instead, replace `manifest.json` with that type's manifest file. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
+### Universal Orchestrator
+
+The release ships this registration as `manifest.json`. It contains exactly this registration and this `InitializationInfo` section:
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "YOUR-PROVIDER-NAME": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPam"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "Username": "<USERNAME>",
+    "Password": "<PASSWORD>",
+    "ClientId": "<OAUTH_CLIENT_ID>",
+    "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+    "GrantType": "password|client_credentials|windows"
+  }
+}
+```
+
+### Keyfactor Command host (Command 10 `web.config`)
+
+```xml
+<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPam, delinea-secretserver-pam" name="Delinea-SecretServer" />
+```
+
+The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
+
 </details>
 
 <details><summary>Delinea-SecretServer-Password</summary>
@@ -1061,6 +1180,46 @@ When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and
 
 > [!NOTE]
 > Additional information on Delinea-SecretServer-Password can be found in the [supplemental documentation](docs/delinea-secretserver-password.md).
+
+## Registration and Naming
+
+The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-Password`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.
+
+This type always uses the `password` grant. A `GrantType` value is not needed and is ignored.
+
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4), so only one of the manifest files can be installed as `manifest.json` on a given orchestrator. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
+### Universal Orchestrator
+
+The release ships this registration as `Password-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and this `InitializationInfo` section:
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "YOUR-PROVIDER-NAME": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "Username": "<USERNAME>",
+    "Password": "<PASSWORD>"
+  }
+}
+```
+
+### Keyfactor Command host (Command 10 `web.config`)
+
+```xml
+<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword, delinea-secretserver-pam" name="Delinea-SecretServer-Password" />
+```
+
+The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
+
 </details>
 
 <details><summary>Delinea-SecretServer-ClientCredentials</summary>
@@ -1152,6 +1311,46 @@ When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and
 
 > [!NOTE]
 > Additional information on Delinea-SecretServer-ClientCredentials can be found in the [supplemental documentation](docs/delinea-secretserver-clientcredentials.md).
+
+## Registration and Naming
+
+The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-ClientCredentials`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.
+
+This type always uses the `client_credentials` flow. A `GrantType` value is not needed and is ignored. If the type-specific class is not the one registered in `manifest.json`, the Universal Orchestrator loads the generic provider, which defaults to `password`.
+
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4), so only one of the manifest files can be installed as `manifest.json` on a given orchestrator. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
+### Universal Orchestrator
+
+The release ships this registration as `ClientCredentials-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and this `InitializationInfo` section:
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "YOUR-PROVIDER-NAME": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
+    "Host": "https://example.secretservercloud.com/SecretServer",
+    "ClientId": "<OAUTH_CLIENT_ID>",
+    "ClientSecret": "<OAUTH_CLIENT_SECRET>"
+  }
+}
+```
+
+### Keyfactor Command host (Command 10 `web.config`)
+
+```xml
+<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamClientCredentials, delinea-secretserver-pam" name="Delinea-SecretServer-ClientCredentials" />
+```
+
+The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
+
 </details>
 
 <details><summary>Delinea-SecretServer-Windows</summary>
@@ -1241,6 +1440,44 @@ When entering Secret fields, select the **Load From Keyfactor Secrets** tab, and
 
 > [!NOTE]
 > Additional information on Delinea-SecretServer-Windows can be found in the [supplemental documentation](docs/delinea-secretserver-windows.md).
+
+## Registration and Naming
+
+The extension entry in the Universal Orchestrator `manifest.json` is keyed by the name of the PAM provider you created in Keyfactor Command (the provider instance name, not the PAM type name `Delinea-SecretServer-Windows`), with no `PAMProviders.` prefix and no `.PAMProvider` suffix. The `InitializationInfo` section uses the same name (`Keyfactor:PAMProviders:<provider name>:InitializationInfo`). The shipped placeholder for both is `YOUR-PROVIDER-NAME`, which must be replaced before the manifest is usable. Any provider name works as long as the extension key and the section name match the provider name in Command. The manifest contains only this one section; no separate section named after the PAM type is needed.
+
+This type always uses Integrated Windows Authentication. A `GrantType` value is not needed and is ignored.
+
+> [!IMPORTANT]
+> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4), so only one of the manifest files can be installed as `manifest.json` on a given orchestrator. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
+
+### Universal Orchestrator
+
+The release ships this registration as `Windows-manifest.json`; rename it to `manifest.json` on install. It contains exactly this registration and this `InitializationInfo` section:
+
+```json
+{
+  "extensions": {
+    "Keyfactor.Platform.Extensions.IPAMProvider": {
+      "YOUR-PROVIDER-NAME": {
+        "assemblyPath": "delinea-secretserver-pam.dll",
+        "TypeFullName": "Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows"
+      }
+    }
+  },
+  "Keyfactor:PAMProviders:YOUR-PROVIDER-NAME:InitializationInfo": {
+    "Host": "https://example.secretserver.internal/SecretServer"
+  }
+}
+```
+
+### Keyfactor Command host (Command 10 `web.config`)
+
+```xml
+<register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamWindows, delinea-secretserver-pam" name="Delinea-SecretServer-Windows" />
+```
+
+The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
+
 </details>
 
 ## License
