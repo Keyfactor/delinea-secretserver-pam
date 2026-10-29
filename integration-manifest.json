@@ -8,7 +8,7 @@
   "update_catalog": true,
   "release_dir": "delinea-secretserver-pam/bin/Release",
   "release_project": "delinea-secretserver-pam/delinea-secretserver-pam.csproj",
-  "description": "The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret Server secret. A valid username, password and secret share settings are required.",
+  "description": "The Delinea Secret Server PAM Provider retrieves stored account credentials from a Delinea Secret Server secret. It supports password, OAuth2 client credentials, and Windows (Integrated Windows Authentication) authentication; the credentials required depend on the PAM type and grant type chosen.",
   "about": {
     "pam": {
       "providerName": "Delinea Secret Server PAM Provider",
@@ -62,6 +62,13 @@
               "InstanceLevel": false
             },
             {
+              "Name": "SkipTlsValidation",
+              "DisplayName": "Skip TLS Validation",
+              "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+              "DataType": 1,
+              "InstanceLevel": false
+            },
+            {
               "Name": "SecretId",
               "DisplayName": "Secret ID",
               "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
@@ -71,7 +78,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -118,7 +125,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -165,7 +172,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
@@ -198,7 +205,7 @@
             {
               "Name": "SecretFieldName",
               "DisplayName": "Secret Field Name",
-              "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+              "Description": "The name of the field in the secret that contains the credential value. NOTE: The value must exactly match (case-sensitive) the name or slug of a field on the secret, and must not be empty.",
               "DataType": 1,
               "InstanceLevel": true
             }
