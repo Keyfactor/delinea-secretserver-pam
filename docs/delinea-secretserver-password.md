@@ -12,6 +12,75 @@ and password is used.
   for information on configuring service accounts.
 - The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
+The `Delinea-SecretServer-Password` PAM type authenticates to Delinea Secret Server using a username and password
+(OAuth2 `password` grant). This is the recommended type for environments where a service account with a username
+and password is used.
+
+- Delinea Secret Server instance accessible over HTTPS from the host running Keyfactor Command or the Universal Orchestrator.
+- A service account with a username and password that has permission to view the secrets being retrieved. See the
+  [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
+  for information on configuring service accounts.
+- The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
+
+1. On the server that hosts Keyfactor Command, download and unzip the latest release of the Delinea Secret Server PAM Provider from the [Releases](../../releases) page.
+
+2. Copy the assemblies to the appropriate directories on the Keyfactor Command server:
+
+    <details><summary>Keyfactor Command 11+</summary>
+
+    1. Copy the unzipped assemblies to each of the following directories:
+
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\Extensions\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\Extensions\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\Extensions\delinea-secretserver-pam`
+
+    </details>
+
+    <details><summary>Keyfactor Command 10</summary>
+
+    1. Copy the assemblies to each of the following directories:
+
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\Service\delinea-secretserver-pam`
+
+    2. Open a text editor on the Keyfactor Command server as an administrator and open the `web.config` file located in the `WebAgentServices` directory.
+
+    3. In the `web.config` file, locate the `<container> </container>` section and add the following registration:
+
+        ```xml
+        <container>
+            ...
+            <!--The following are PAM Provider registrations. Uncomment them to use them in the Keyfactor Product:-->
+
+            <!--Add the following line exactly to register the PAM Provider-->
+            <register type="IPAMProvider" mapTo="Keyfactor.Extensions.Pam.Delinea.SecretServerPamPassword, delinea-secretserver-pam" name="Delinea-SecretServer-Password" />
+        </container>
+        ```
+
+    4. Repeat steps 2 and 3 for each of the directories listed in step 1. The configuration files are located in the following paths by default:
+
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\web.config`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\Service\CMSTimerService.exe.config`
+
+    </details>
+
+3. Restart the Keyfactor Command services (`iisreset`).
+
+> [!NOTE]
+> Before installing, create the PAM type and define a provider instance in Keyfactor Command, as described in the sections above for this PAM type and in [Usage](#usage).
+
+1. Install the Delinea Secret Server PAM Provider assemblies as described in Step 1 of [Installing on a Universal Orchestrator](#installing-on-a-universal-orchestrator).
+
+2. To use `Delinea-SecretServer-Password`, replace the contents of `manifest.json` with the contents of `Password-manifest.json` (for example, delete `manifest.json` and rename `Password-manifest.json` to `manifest.json`). The file contents are shown in [Delinea-SecretServer-Password Registration Snippets](#delinea-secretserver-password-registration-snippets).
+
+3. Edit `manifest.json` as described in Step 3 of [Installing on a Universal Orchestrator](#installing-on-a-universal-orchestrator): replace `YOUR-PROVIDER-NAME` with the name of your PAM provider in Keyfactor Command and fill in the placeholder values from the [requirements](docs/delinea-secretserver-password.md#requirements) section.
+
+4. Restart the Universal Orchestrator service after editing `manifest.json`.
+
 ## Delinea-SecretServer-Password Registration Snippets
 
 Shared registration and naming rules are described in [Registration and Naming](https://github.com/Keyfactor/delinea-secretserver-pam/blob/main/README.md#registration-and-naming).
@@ -47,3 +116,4 @@ The release ships this registration as `Password-manifest.json`; rename it to `m
 ```
 
 The assembly name in `mapTo` is the name of the extension DLL (`delinea-secretserver-pam`), and the class is the one for this PAM type.
+
