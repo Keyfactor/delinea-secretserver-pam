@@ -55,13 +55,14 @@ integrations where an application account is used instead of a user account.
     * Replace the placeholder values in the section with the values collected in the [requirements](docs/delinea-secretserver-clientcredentials.md#requirements) section.
     * Do not leave any other `Keyfactor:PAMProviders:*:InitializationInfo` sections in `manifest.json` (for example, sections left over from the 1.3.0 manifest). In testing, sample sections left in `manifest.json` supplied their placeholder values to the plugin in place of the real ones.
 
-    > [!NOTE]
-    > Observed on a Universal Orchestrator (K8SJKS store, store password bound to the provider, named PAM resolver): an extension entry keyed `PAMProviders.<provider name>.PAMProvider` failed with `No extension configuration found for 'Keyfactor.Platform.Extensions.IPAMProvider' with name '<provider name>'` followed by `No PAM provider registered with name <provider name>`. Keying the extension entry by the bare provider name (for example `Delinea`), together with the `Keyfactor:PAMProviders:<provider name>:InitializationInfo` section, cleared the error and the plugin ran with the supplied configuration. Other key shapes were not tested. A placeholder key in angle brackets made an orchestrator fail to start in the tested environment (observed once; the cause was not established), which is why the shipped placeholder is the bracket-free `YOUR-PROVIDER-NAME`.
+    > [!IMPORTANT]
+    > Update placeholder values `YOUR-PROVIDER-NAME`. This needs to match the name of the provider instance defined in
+    > Keyfactor Command, if it does not you may encounter failed with `No extension configuration found 
+    > for 'Keyfactor.Platform.Extensions.IPAMProvider' with name '<provider name>'` followed by `No PAM provider registered 
+    > with name <provider name>`.  
+    
 
 4. Restart the Universal Orchestrator service after editing `manifest.json`.
-
-> [!IMPORTANT]
-> A Universal Orchestrator supports only **one** PAM provider registration per `manifest.json` (until UO v26.4), so only one of the manifest files can be installed as `manifest.json` on a given orchestrator. Using more than one Delinea PAM type requires a separate Universal Orchestrator for each.
 
 ## Registration and Naming
 
