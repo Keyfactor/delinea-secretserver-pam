@@ -1,33 +1,61 @@
 ## Delinea-SecretServer-ClientCredentials
 
-The `Delinea-SecretServer-ClientCredentials` PAM type authenticates to Delinea Secret Server using an application
-account (Client ID and Client Secret). This is the recommended type for service-to-service integrations where an
-application account is used instead of a user account.
+The `Delinea-SecretServer-ClientCredentials` PAM type authenticates to Delinea Secret Server with a Client ID and
+Client Secret. This is the recommended type for service-to-service integrations that use an application account or an
+SDK client account instead of a user account.
 
-Secret Server's `/oauth2/token` endpoint is always called with `grant_type=password`. The provider therefore sends the
-Client ID as the token request's `username` and the Client Secret as its `password`; this is how Secret Server expects
-application accounts to authenticate.
+> [!WARNING]
+> **The token request depends on the kind of account your Client ID belongs to.** Secret Server has two kinds of
+> client credentials, and they authenticate differently:
+>
+> * **SDK client account** (`ClientId` starts with `sdk-client-`): the provider sends
+>   `grant_type=client_credentials` with `client_id` and `client_secret`. Enter the Client ID exactly as Secret Server
+>   issued it, **including** the `sdk-client-` prefix. Requires v1.3.1 or later; earlier versions fail with HTTP 400
+>   `{"error":"Login failed."}`.
+> * **Application account** (any other `ClientId`): the provider sends `grant_type=password` with the Client ID as
+>   `username` and the Client Secret as `password`, as in earlier versions.
+>
+> See [Client Credentials: Application Accounts vs SDK Client Accounts](/README.md#client-credentials-application-accounts-vs-sdk-client-accounts)
+> for how the two kinds differ, where each comes from, and links to the Delinea documentation.
 
 ## Requirements
 
 - Delinea Secret Server instance accessible over HTTPS from the host running Keyfactor Command or the Universal Orchestrator.
-- An application account (Client ID and Client Secret) with permission to view the secrets being retrieved. See the
-  [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
-  for information on configuring application accounts.
+- One of the following, with permission to view the secrets being retrieved:
+  - An **application account**: `ClientId` is its username and `ClientSecret` its password. See
+    [User Settings](https://docs.delinea.com/online-help/secret-server/users-roles/users/user-settings/index.htm) and
+    [Script Authentication Using Tokens](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
+  - An **SDK client account**: `ClientId` is the issued `sdk-client-…` ID and `ClientSecret` the issued client secret.
+    The secret must be shared with the application account the SDK client onboarding rule is tied to. See
+    [Using the Secret Server SDK for DevOps](https://docs.delinea.com/online-help/secret-server/api-scripting/sdk-devops/using-sdk/index.htm).
 - The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
-The `Delinea-SecretServer-ClientCredentials` PAM type authenticates to Delinea Secret Server using an application
-account (Client ID and Client Secret). This is the recommended type for service-to-service integrations where an
-application account is used instead of a user account.
+The `Delinea-SecretServer-ClientCredentials` PAM type authenticates to Delinea Secret Server with a Client ID and
+Client Secret. This is the recommended type for service-to-service integrations that use an application account or an
+SDK client account instead of a user account.
 
-Secret Server's `/oauth2/token` endpoint is always called with `grant_type=password`. The provider therefore sends the
-Client ID as the token request's `username` and the Client Secret as its `password`; this is how Secret Server expects
-application accounts to authenticate.
+> [!WARNING]
+> **The token request depends on the kind of account your Client ID belongs to.** Secret Server has two kinds of
+> client credentials, and they authenticate differently:
+>
+> * **SDK client account** (`ClientId` starts with `sdk-client-`): the provider sends
+>   `grant_type=client_credentials` with `client_id` and `client_secret`. Enter the Client ID exactly as Secret Server
+>   issued it, **including** the `sdk-client-` prefix. Requires v1.3.1 or later; earlier versions fail with HTTP 400
+>   `{"error":"Login failed."}`.
+> * **Application account** (any other `ClientId`): the provider sends `grant_type=password` with the Client ID as
+>   `username` and the Client Secret as `password`, as in earlier versions.
+>
+> See [Client Credentials: Application Accounts vs SDK Client Accounts](/README.md#client-credentials-application-accounts-vs-sdk-client-accounts)
+> for how the two kinds differ, where each comes from, and links to the Delinea documentation.
 
 - Delinea Secret Server instance accessible over HTTPS from the host running Keyfactor Command or the Universal Orchestrator.
-- An application account (Client ID and Client Secret) with permission to view the secrets being retrieved. See the
-  [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
-  for information on configuring application accounts.
+- One of the following, with permission to view the secrets being retrieved:
+  - An **application account**: `ClientId` is its username and `ClientSecret` its password. See
+    [User Settings](https://docs.delinea.com/online-help/secret-server/users-roles/users/user-settings/index.htm) and
+    [Script Authentication Using Tokens](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm).
+  - An **SDK client account**: `ClientId` is the issued `sdk-client-…` ID and `ClientSecret` the issued client secret.
+    The secret must be shared with the application account the SDK client onboarding rule is tied to. See
+    [Using the Secret Server SDK for DevOps](https://docs.delinea.com/online-help/secret-server/api-scripting/sdk-devops/using-sdk/index.htm).
 - The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
 1. On the server that hosts Keyfactor Command, download and unzip the latest release of the Delinea Secret Server PAM Provider from the [Releases](../../releases) page.

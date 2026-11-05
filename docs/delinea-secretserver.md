@@ -14,6 +14,9 @@ to the chosen authentication method.
 - A service account or application account with permission to view the secrets being retrieved. See the
   [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
   for information on configuring service accounts and application accounts.
+- With `GrantType` set to `client_credentials`, `ClientId` can be an application account or an SDK client account
+  (`sdk-client-…`), and the provider sends a different token request for each.
+  See [Client Credentials: Application Accounts vs SDK Client Accounts](/README.md#client-credentials-application-accounts-vs-sdk-client-accounts).
 - `GrantType` is optional and defaults to `password` when omitted. It is case-sensitive and must be exactly `password`, `client_credentials` or `windows`; the shipped `manifest.json` placeholder `password|client_credentials|windows` must be replaced with one of these.
 - The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
@@ -34,6 +37,9 @@ to the chosen authentication method.
 - A service account or application account with permission to view the secrets being retrieved. See the
   [Delinea Secret Server documentation](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm)
   for information on configuring service accounts and application accounts.
+- With `GrantType` set to `client_credentials`, `ClientId` can be an application account or an SDK client account
+  (`sdk-client-…`), and the provider sends a different token request for each.
+  See [Client Credentials: Application Accounts vs SDK Client Accounts](/README.md#client-credentials-application-accounts-vs-sdk-client-accounts).
 - `GrantType` is optional and defaults to `password` when omitted. It is case-sensitive and must be exactly `password`, `client_credentials` or `windows`; the shipped `manifest.json` placeholder `password|client_credentials|windows` must be replaced with one of these.
 - The `SecretFieldName` value must match a field's name or slug on the secret exactly (the comparison is case-sensitive). An empty value, or a field that does not exist on the secret, is an error.
 
