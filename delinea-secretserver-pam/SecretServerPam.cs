@@ -327,6 +327,21 @@ namespace Keyfactor.Extensions.Pam.Delinea
         // Token acquisition
         // ---------------------------------------------------------------------------
 
+        /// <summary>
+        ///     Prefix Secret Server gives the client ID of an SDK client account.
+        /// </summary>
+        internal const string SdkClientIdPrefix = "sdk-client-";
+
+        /// <summary>
+        ///     Returns <c>true</c> when the configuration is for the <c>client_credentials</c> grant and the
+        ///     ClientId is a Secret Server SDK client ID, which must authenticate with a real OAuth2
+        ///     <c>client_credentials</c> request instead of the password grant.
+        /// </summary>
+        internal static bool IsSdkClientCredential(DelineaConfiguration configurationInfo)
+            => configurationInfo.GrantType == "client_credentials" &&
+               !string.IsNullOrEmpty(configurationInfo.ClientId) &&
+               configurationInfo.ClientId.StartsWith(SdkClientIdPrefix, StringComparison.OrdinalIgnoreCase);
+
         private async Task<string> GetAccessToken(
             HttpClient client,
             DelineaConfiguration configurationInfo,
@@ -337,15 +352,32 @@ namespace Keyfactor.Extensions.Pam.Delinea
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/x-www-form-urlencoded"));
 
-            // NOTE: Delinea Secret Server's token endpoint always uses "username"/"password"
-            // field names regardless of whether the flow is password or client_credentials.
-            // This is a Delinea API constraint — do not change the field names.
-            var body = new Dictionary<string, string>
-            {
-                { "username", configurationInfo.Username },
-                { "password", configurationInfo.Password },
-                { "grant_type", "password" } // Delinea API always expects grant_type=password
-            };
+            // NOTE: Secret Server accepts two kinds of credential on /oauth2/token:
+            //   * User and application accounts log in with grant_type=password and send their
+            //     username/password. The client_credentials PAM types send ClientId/ClientSecret
+            //     this way unless the ClientId is an SDK client ID (backwards compatible with v1.2+).
+            //   * SDK client accounts (ClientId "sdk-client-<id>", created from an SDK client
+            //     onboarding rule) require grant_type=client_credentials with client_id/client_secret,
+            //     as Delinea's own SDKs send it. They are rejected ("Login failed.") with a password grant.
+            var useSdkClientGrant = IsSdkClientCredential(configurationInfo);
+            var body = useSdkClientGrant
+                ? new Dictionary<string, string>
+                {
+                    { "client_id", configurationInfo.ClientId },
+                    { "client_secret", configurationInfo.ClientSecret },
+                    { "grant_type", "client_credentials" }
+                }
+                : new Dictionary<string, string>
+                {
+                    { "username", configurationInfo.Username },
+                    { "password", configurationInfo.Password },
+                    { "grant_type", "password" }
+                };
+
+            if (useSdkClientGrant)
+                Logger.LogDebug(
+                    "ClientId has the '{Prefix}' prefix; authenticating as a Secret Server SDK client account",
+                    SdkClientIdPrefix);
 
             Logger.LogTrace("Authentication request grant type: {GrantType}", body["grant_type"]);
 

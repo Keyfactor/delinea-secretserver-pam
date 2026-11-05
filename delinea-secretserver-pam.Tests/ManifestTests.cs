@@ -229,7 +229,8 @@ public class ManifestTests
         sut.GetPassword(Instance(), new Dictionary<string, string>
             { { "Host", Host }, { "ClientId", "cid-1" }, { "ClientSecret", "csec-1" } }).Should().Be("v");
 
-        // Delinea quirk: token body is grant_type=password with ClientId/ClientSecret as username/password.
+        // Application account ClientId: token body is grant_type=password with ClientId/ClientSecret as
+        // username/password. ("sdk-client-" IDs use client_credentials; see ClientCredentialsTokenRequest.)
         bodies[0].Should().Contain("username=cid-1").And.Contain("password=csec-1")
             .And.Contain("grant_type=password");
         requests.Last().RequestUri!.AbsolutePath.Should().Be("/SecretServer/api/v1/secrets/42");

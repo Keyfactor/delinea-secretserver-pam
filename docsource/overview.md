@@ -2,7 +2,9 @@
 
 The Delinea Secret Server PAM Provider allows for the retrieval of stored account credentials from a Delinea Secret
 Server secret. Three authentication methods are supported: `password` (username/password), `client_credentials`
-(OAuth2 application account), and `windows` (Integrated Windows Authentication).
+(a Secret Server application account or SDK client account, see
+[Client Credentials: Application Accounts vs SDK Client Accounts](#client-credentials-application-accounts-vs-sdk-client-accounts)),
+and `windows` (Integrated Windows Authentication).
 
 Terminology used in this document:
 
@@ -25,7 +27,9 @@ field name (the "Secret Field Name") to retrieve credentials from the Delinea Se
 
 For the `password` and `client_credentials` grant types, the provider first requests an access token from the Secret
 Server `/oauth2/token` endpoint, then uses that token to read the secret. For `client_credentials`, the token request
-is still sent with `grant_type=password`: the Client ID is sent as `username` and the Client Secret as `password`.
+depends on the kind of account the Client ID belongs to. An application account is sent as a `grant_type=password`
+login; an SDK client account (Client ID starting with `sdk-client-`) is sent as a `grant_type=client_credentials`
+request. See [Client Credentials: Application Accounts vs SDK Client Accounts](#client-credentials-application-accounts-vs-sdk-client-accounts).
 For the `windows` grant type there is no token step; the provider calls the Secret Server `winauthwebservices` endpoint
 directly using the Windows identity of the running process.
 
@@ -98,6 +102,52 @@ fields relevant to the chosen authentication flow, which simplifies configuratio
 > [!IMPORTANT]
 > `Delinea-SecretServer-Windows` uses Integrated Windows Authentication, which is not supported on Delinea Secret
 > Server Cloud. It is only compatible with on-premises Secret Server installations.
+
+## Client Credentials: Application Accounts vs SDK Client Accounts
+
+> [!WARNING]
+> **Secret Server has two different kinds of "client credentials", and they authenticate differently.** Both are entered
+> in the same `ClientId` and `ClientSecret` fields (the `Delinea-SecretServer-ClientCredentials` type, or the generic
+> `Delinea-SecretServer` type with `GrantType` set to `client_credentials`). The provider picks the token request from
+> the `ClientId` value:
+>
+> * **`ClientId` starts with `sdk-client-`**: the provider sends an OAuth2 `grant_type=client_credentials` request
+>   with `client_id` and `client_secret`. This is required for SDK client accounts and was added in v1.3.1.
+> * **Any other `ClientId`**: the provider sends a `grant_type=password` login with the Client ID as `username` and the
+>   Client Secret as `password`. This is how application accounts log in, and it is unchanged from earlier versions.
+>
+> Versions before 1.3.1 always sent the password login. With an SDK client account they fail with HTTP 400 and
+> `{"error":"Login failed."}` on the token request.
+
+| | Application account | SDK client account |
+| --- | --- | --- |
+| What it is | A Secret Server user created with the **Application Account** option. It can only use the API; it cannot log in to the web UI. | A client registered against an SDK client onboarding rule (**SDK Client Management**). Each onboarding rule is tied to an application account. |
+| How you get the credentials | You choose the username and password when you create the user. | Secret Server issues them when a client registers against the onboarding rule (for example with the Delinea SDK or `tss init`). |
+| `ClientId` | The application account's username (for example `svc-keyfactor`). | The issued client ID, **including** the `sdk-client-` prefix (for example `sdk-client-4437996e-…`). |
+| `ClientSecret` | The application account's password. | The issued client secret. |
+| Token request sent to `{Host}/oauth2/token` | `grant_type=password&username=<ClientId>&password=<ClientSecret>` | `grant_type=client_credentials&client_id=<ClientId>&client_secret=<ClientSecret>` |
+| Permission to the secret | Share the secret with the application account. | Share the secret with the application account the onboarding rule is tied to. |
+
+Notes:
+
+* An application account's username and password can also be used with the `Delinea-SecretServer-Password` type. Both
+  types send the same request, so the choice is only about which fields appear in the Keyfactor Command UI.
+* Enter an SDK client ID exactly as Secret Server issued it, with the `sdk-client-` prefix. Without the prefix the
+  provider sends a password login, which Secret Server rejects.
+* The `sdk-client-` check applies only to the `client_credentials` grant. The `password` grant always sends a password
+  login, whatever the username.
+* Delinea's public REST API documentation describes only the password login for `/oauth2/token`. The SDK client
+  request matches what Delinea's own Java SDK sends for SDK client accounts
+  ([`SecretServerFactoryBean.getTokenUsingSDKClient`](https://github.com/DelineaXPM/tss-sdk-java/blob/main/src/main/java/com/delinea/server/spring/SecretServerFactoryBean.java)).
+* This is not the Delinea Platform client credentials flow (`/identity/api/oauth2/token/xpmplatform`), which this
+  provider does not support.
+
+Delinea documentation:
+
+* [User Settings](https://docs.delinea.com/online-help/secret-server/users-roles/users/user-settings/index.htm): application accounts.
+* [Script Authentication Using Tokens](https://docs.delinea.com/online-help/secret-server/api-scripting/authentication/script-token-auth/index.htm): the `/oauth2/token` password login.
+* [Using the Secret Server SDK for DevOps](https://docs.delinea.com/online-help/secret-server/api-scripting/sdk-devops/using-sdk/index.htm): creating SDK client onboarding rules and registering clients.
+* [Secret Server SDK Integration](https://docs.delinea.com/online-help/secret-server/api-scripting/sdk-devops/sdk-integration/index.htm): SDK clients and onboarding rules.
 
 ## Configuration Notes
 

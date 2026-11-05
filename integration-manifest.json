@@ -43,7 +43,7 @@
             {
               "Name": "ClientId",
               "DisplayName": "Secret Server Client ID",
-              "Description": "The client ID used to authenticate to the Secret Server instance. NOTE: only applicable if using the `client_credentials` grant type.",
+              "Description": "The client ID used to authenticate to the Secret Server instance: an application account username, or an SDK client ID including its `sdk-client-` prefix. NOTE: only applicable if using the `client_credentials` grant type.",
               "DataType": 1,
               "InstanceLevel": false
             },
@@ -144,14 +144,14 @@
             {
               "Name": "ClientId",
               "DisplayName": "OAuth2 Client ID",
-              "Description": "The client ID (application account name) used for OAuth2 client credentials authentication.",
+              "Description": "The client ID used for client credentials authentication: an application account username, or an SDK client ID including its `sdk-client-` prefix.",
               "DataType": 1,
               "InstanceLevel": false
             },
             {
               "Name": "ClientSecret",
               "DisplayName": "OAuth2 Client Secret",
-              "Description": "The client secret (application account password) used for OAuth2 client credentials authentication.",
+              "Description": "The client secret used for client credentials authentication: the application account password, or the SDK client secret.",
               "DataType": 2,
               "InstanceLevel": false
             },

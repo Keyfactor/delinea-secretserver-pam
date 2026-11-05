@@ -18,6 +18,12 @@
 
 ## Bug Fixes
 
+- `(auth)` **Secret Server SDK client accounts now work with `client_credentials`.** When the `ClientId` starts with
+  `sdk-client-`, the token request is sent as `grant_type=client_credentials` with `client_id` and `client_secret`.
+  Previously every `client_credentials` request was sent as a `grant_type=password` login, which Secret Server rejects
+  for SDK client accounts with HTTP 400 `{"error":"Login failed."}`. Application account Client IDs (no `sdk-client-`
+  prefix) still use the password login, unchanged. Applies to the `Delinea-SecretServer-ClientCredentials` type and to
+  the generic `Delinea-SecretServer` type with `GrantType` set to `client_credentials`.
 - `(params)` The generic `Delinea-SecretServer` PAM type in `integration-manifest.json` now includes the
   `SkipTlsValidation` parameter, consistent with the type-specific types and the code.
 - `(docs)` Each PAM type's page now shows its own manifest and install steps (previously the Windows snippet appeared
@@ -26,6 +32,9 @@
 
 ## Upgrade Notes
 
+- **Using an SDK client account?** Enter its Client ID exactly as Secret Server issued it, including the
+  `sdk-client-` prefix. Without the prefix the provider sends a password login, which fails for SDK client accounts.
+  See "Client Credentials: Application Accounts vs SDK Client Accounts" in the README.
 - Replace `YOUR-PROVIDER-NAME` with your Command PAM provider name in both the `extensions` key and the
   `InitializationInfo` section name. The key shape changed from the 1.3.0 form (`PAMProviders.Delinea.PAMProvider`).
 - Installing 1.3.1 over an edited `manifest.json` overwrites it; re-apply your edits.
