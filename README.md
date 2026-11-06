@@ -335,6 +335,13 @@ Before proceeding with installation, you should consider which pattern is best f
 
 To install Delinea Secret Server PAM Provider, it is recommended you install [kfutil](https://github.com/Keyfactor/kfutil). `kfutil` is a command-line tool that simplifies the process of creating PAM Types in Keyfactor Command.
 
+The Delinea Secret Server PAM Provider implements 4 PAM Types. Depending on your use case, you may elect to install one, or all of these PAM Types. An overview for each type is linked below:
+* [Delinea-SecretServer](docs/delinea-secretserver.md)
+* [Delinea-SecretServer-Password](docs/delinea-secretserver-password.md)
+* [Delinea-SecretServer-ClientCredentials](docs/delinea-secretserver-clientcredentials.md)
+* [Delinea-SecretServer-Windows](docs/delinea-secretserver-windows.md)
+
+
 
 The Delinea Secret Server PAM Provider implements 4 PAM Types. Depending on your use case, you may elect to install one, or all of these PAM Types. An overview for each type is linked below:
 * [Delinea-SecretServer](docs/delinea-secretserver.md)
@@ -640,6 +647,8 @@ Below is the payload to `POST` to the Keyfactor Command API
 
 3. Restart the Keyfactor Command services (`iisreset`).
 
+##### Using `kfutil`
+Create the required PAM Types in the connected Command platform.
 
 #### Install PAM provider on a Universal Orchestrator Host (Remote)
 
@@ -673,6 +682,12 @@ Below is the payload to `POST` to the Keyfactor Command API
 
 #### Create PAM type in Keyfactor Command
 
+    1. Copy the assemblies to each of the following directories:
+    
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebAgentServices\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\KeyfactorAPI\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\WebConsole\bin\delinea-secretserver-pam`
+        * `C:\Program Files\Keyfactor\Keyfactor Platform\Service\delinea-secretserver-pam`
 
 ##### Using `kfutil`
 Create the required PAM Types in the connected Command platform.
@@ -803,7 +818,58 @@ Below is the payload to `POST` to the Keyfactor Command API
 4. Restart the Universal Orchestrator service after editing `manifest.json`.
 
 
-</details>
+Below is the payload to `POST` to the Keyfactor Command API
+```json
+{
+    "Name": "Delinea-SecretServer-ClientCredentials",
+    "Parameters": [
+        {
+            "Name": "Host",
+            "DisplayName": "Secret Server URL",
+            "Description": "The URL to the Secret Server instance. Example: https://example.secretservercloud.com/SecretServer",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "ClientId",
+            "DisplayName": "OAuth2 Client ID",
+            "Description": "The client ID (application account name) used for OAuth2 client credentials authentication.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "ClientSecret",
+            "DisplayName": "OAuth2 Client Secret",
+            "Description": "The client secret (application account password) used for OAuth2 client credentials authentication.",
+            "DataType": 2,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SkipTlsValidation",
+            "DisplayName": "Skip TLS Validation",
+            "Description": "Set to `true` to disable TLS certificate validation. Use only in non-production environments.",
+            "DataType": 1,
+            "InstanceLevel": false
+        },
+        {
+            "Name": "SecretId",
+            "DisplayName": "Secret ID",
+            "Description": "The ID of the secret in Secret Server. This is the integer ID that is used to retrieve the secret from Secret Server.",
+            "DataType": 1,
+            "InstanceLevel": true
+        },
+        {
+            "Name": "SecretFieldName",
+            "DisplayName": "Secret Field Name",
+            "Description": "The name of the field in the secret that contains the credential value. NOTE: The field must exist.",
+            "DataType": 1,
+            "InstanceLevel": true
+        }
+    ]
+}
+```
+
+#### Install PAM provider on Keyfactor Command Host (Local)
 
 <details><summary>Delinea-SecretServer-Windows</summary>
 
