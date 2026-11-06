@@ -8,6 +8,7 @@
 using System.Net;
 using FluentAssertions;
 using Keyfactor.Extensions.Pam.Delinea.Tests.Fakes;
+using Keyfactor.Platform.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
@@ -393,7 +394,7 @@ public class SecretServerPamTests
         public void GetPassword_TokenRequestBody_ContainsUsernameAndPassword()
         {
             // Verify the token POST uses "username"/"password" field names
-            // (Delinea API constraint — not "client_id"/"client_secret")
+            // (password grant — not "client_id"/"client_secret")
             string? capturedBody = null;
             var callCount = 0;
 
@@ -490,8 +491,8 @@ public class SecretServerPamTests
         [Fact]
         public void GetPassword_TokenRequestBody_UsesUsernamePasswordFieldNames()
         {
-            // Delinea API constraint: client_credentials flow still sends username/password
-            // in the token request body — NOT client_id/client_secret
+            // An application account ClientId (no "sdk-client-" prefix) logs in with the password
+            // grant, sending username/password in the token request body — NOT client_id/client_secret
             string? capturedBody = null;
             var callCount = 0;
 
@@ -512,7 +513,7 @@ public class SecretServerPamTests
             var sut = new SecretServerPamClientCredentials(new HttpClient(handler), NullLogger);
             sut.GetPassword(InstanceParams(), ServerParams());
 
-            // Must use username= / password= field names (Delinea API constraint)
+            // Must use username= / password= field names (application account login)
             capturedBody.Should().Contain("username=");
             capturedBody.Should().Contain("password=");
             // ClientId value should appear as the username value
@@ -951,22 +952,28 @@ public class SecretServerPamTests
     }
 
     // ---------------------------------------------------------------------------
-    // client_credentials GrantType bug fix — must not send "password" grant type
+    // client_credentials token request — application account vs SDK client account
     // ---------------------------------------------------------------------------
 
-    public class ClientCredentialsGrantTypeFix
+    public class ClientCredentialsTokenRequest
     {
+        // Shape of a Secret Server SDK client account ID ("sdk-client-<guid>").
+        private const string FakeSdkClientId = "sdk-client-00000000-0000-0000-0000-000000000001";
+
         private static Dictionary<string, string> InstanceParams() => new()
         {
             { "SecretId", FakeSecretId },
             { "SecretFieldName", FakeFieldName }
         };
 
-        [Fact]
-        public void GetPassword_ClientCredentials_TokenRequestBody_AlwaysSendsPasswordGrantType()
+        /// <summary>
+        ///     Runs the provider built by <paramref name="createSut" /> against a fake server and
+        ///     returns the token request body.
+        /// </summary>
+        private static string CaptureTokenRequestBody(
+            Func<HttpClient, IPAMProvider> createSut,
+            Dictionary<string, string> serverParams)
         {
-            // Delinea API constraint: even for client_credentials flow, the token endpoint
-            // requires grant_type=password. Do not change this behaviour.
             string? capturedBody = null;
             var callCount = 0;
 
@@ -983,16 +990,102 @@ public class SecretServerPamTests
                     { Content = new StringContent(BuildSecretResponse()) };
             });
 
-            var sut = new SecretServerPamClientCredentials(new HttpClient(handler), NullLogger);
-            sut.GetPassword(InstanceParams(), new Dictionary<string, string>
-            {
-                { "Host", FakeHost },
-                { "ClientId", FakeClientId },
-                { "ClientSecret", FakeClientSecret }
-            });
+            var sut = createSut(new HttpClient(handler));
+            sut.GetPassword(InstanceParams(), serverParams).Should().Be(FakeFieldValue);
+            return capturedBody!;
+        }
 
-            capturedBody.Should().Contain("grant_type=password",
-                "Delinea API constraint: token endpoint always requires grant_type=password");
+        [Fact]
+        public void ApplicationAccountClientId_SendsPasswordGrant()
+        {
+            // Application accounts (any ClientId without the "sdk-client-" prefix) log in with
+            // grant_type=password. Kept for backwards compatibility with v1.2 and later.
+            var body = CaptureTokenRequestBody(
+                c => new SecretServerPamClientCredentials(c, NullLogger),
+                new Dictionary<string, string>
+                {
+                    { "Host", FakeHost },
+                    { "ClientId", FakeClientId },
+                    { "ClientSecret", FakeClientSecret }
+                });
+
+            body.Should().Contain("grant_type=password")
+                .And.Contain($"username={Uri.EscapeDataString(FakeClientId)}")
+                .And.Contain($"password={Uri.EscapeDataString(FakeClientSecret)}")
+                .And.NotContain("client_id=");
+        }
+
+        [Fact]
+        public void SdkClientId_SendsClientCredentialsGrant()
+        {
+            // SDK client accounts are rejected with the password grant ("Login failed.") and
+            // must use a real OAuth2 client_credentials request.
+            var body = CaptureTokenRequestBody(
+                c => new SecretServerPamClientCredentials(c, NullLogger),
+                new Dictionary<string, string>
+                {
+                    { "Host", FakeHost },
+                    { "ClientId", FakeSdkClientId },
+                    { "ClientSecret", FakeClientSecret }
+                });
+
+            body.Should().Contain("grant_type=client_credentials")
+                .And.Contain($"client_id={Uri.EscapeDataString(FakeSdkClientId)}")
+                .And.Contain($"client_secret={Uri.EscapeDataString(FakeClientSecret)}")
+                .And.NotContain("username=")
+                .And.NotContain("password=");
+        }
+
+        [Fact]
+        public void SdkClientId_PrefixMatchIsCaseInsensitive()
+        {
+            var body = CaptureTokenRequestBody(
+                c => new SecretServerPamClientCredentials(c, NullLogger),
+                new Dictionary<string, string>
+                {
+                    { "Host", FakeHost },
+                    { "ClientId", FakeSdkClientId.ToUpperInvariant() },
+                    { "ClientSecret", FakeClientSecret }
+                });
+
+            body.Should().Contain("grant_type=client_credentials");
+        }
+
+        [Fact]
+        public void GenericType_ClientCredentialsGrant_SdkClientId_SendsClientCredentialsGrant()
+        {
+            var body = CaptureTokenRequestBody(
+                c => new SecretServerPam(c, NullLogger),
+                new Dictionary<string, string>
+                {
+                    { "Host", FakeHost },
+                    { "Username", "N/A" },
+                    { "Password", "N/A" },
+                    { "ClientId", FakeSdkClientId },
+                    { "ClientSecret", FakeClientSecret },
+                    { "GrantType", "client_credentials" }
+                });
+
+            body.Should().Contain("grant_type=client_credentials")
+                .And.Contain($"client_id={Uri.EscapeDataString(FakeSdkClientId)}");
+        }
+
+        [Fact]
+        public void PasswordType_UsernameWithSdkClientPrefix_StillSendsPasswordGrant()
+        {
+            // The prefix check applies only to the client_credentials grant; the password
+            // grant always sends what was configured as Username/Password.
+            var body = CaptureTokenRequestBody(
+                c => new SecretServerPamPassword(c, NullLogger),
+                new Dictionary<string, string>
+                {
+                    { "Host", FakeHost },
+                    { "Username", FakeSdkClientId },
+                    { "Password", FakePassword }
+                });
+
+            body.Should().Contain("grant_type=password")
+                .And.NotContain("client_id=");
         }
     }
 
