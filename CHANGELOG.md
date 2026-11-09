@@ -1,3 +1,19 @@
+# v1.3.2
+
+## Bug Fixes
+
+- `(manifest)` The shipped `manifest.json` now contains a single `InitializationInfo` section, as documented and as the
+  other per-type manifests do. 1.3.1 shipped it with three extra sections
+  (`Delinea-SecretServer-Password`, `Delinea-SecretServer-ClientCredentials` and `Delinea-SecretServer-Windows`)
+  after the provider-named one. Sample sections left in `manifest.json` can supply their placeholder values to the
+  plugin in place of the real ones.
+
+## Upgrade Notes
+
+- If you installed 1.3.1 with the generic `manifest.json`, delete any
+  `Keyfactor:PAMProviders:Delinea-SecretServer-*:InitializationInfo` sections from it. Only the section named for your
+  Command PAM provider should remain.
+
 # v1.3.1
 
 ## Breaking Changes
